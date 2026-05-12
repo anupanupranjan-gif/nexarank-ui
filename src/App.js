@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Anup Ranjan. Licensed under Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 import React, { useState, useEffect } from 'react';
 
 const API_BASE = '/nexarank/api/v1';
