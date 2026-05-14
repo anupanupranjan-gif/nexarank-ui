@@ -61,11 +61,22 @@ See [nexarank-api](https://github.com/anupanupranjan-gif/nexarank-api) for the b
 
 ## Roadmap
 
-- [ ] Rule scheduling controls (activate/expire by date)
-- [ ] Rule preview panel (simulate results before activating)
+### Near Term
+- [ ] Rule scheduling (activate/expire by date — for promotions and seasonal events)
+- [ ] Rule priority ordering and conflict detection
+- [ ] Rule preview (simulate results before activating)
+
+### AI Layer
+- [ ] AI-suggested rules — analyze zero-result queries and suggest synonyms automatically
+- [ ] Clickstream feedback loop — track which rules drive clicks and conversions via Kafka
+- [ ] Semantic rule matching — rules fire on query meaning, not just exact keyword match
+- [ ] AI assistant panel in Grafana — "why did p95 spike after this rule went live?"
+
+### Platform
+- [ ] A/B rule testing with conversion comparison
+- [ ] Multi-tenant namespace support (multiple brands/catalogs from one deployment)
+- [ ] LDAP/Azure AD authentication for enterprise teams
 - [ ] Rule performance metrics dashboard
-- [ ] A/B test results view
-- [ ] Dark mode
 
 ## License
 
