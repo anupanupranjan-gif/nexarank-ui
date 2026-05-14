@@ -1,14 +1,37 @@
 # NexaRank UI
 
-The merchandising console for NexaRank — a browser-based interface for creating and managing search merchandising rules without engineering support.
+The merchandising console for NexaRank — a browser-based interface for creating, reviewing, and managing search merchandising rules without engineering support.
+
+Part of the [SearchX](https://github.com/anupanupranjan-gif/search-infra) open-source eCommerce search platform.
 
 ## Features
 
+- Login with JWT authentication
+- Role-based navigation (VIEWER, MERCHANDISER, APPROVER, ADMIN)
 - Create PIN, BOOST, BURY, and SYNONYM rules via a clean form UI
-- View all active rules in a sortable table
-- Enable/disable rules with one click
-- Delete rules
-- Connects to nexarank-api via REST
+- Submit rules for review — approval workflow built in
+- Approver queue for reviewing and publishing pending rules
+- Enable/disable approved rules with one click
+- User management panel (ADMIN only — create users, assign roles)
+- Reject rules with a reason comment
+
+## Screenshots
+
+### Login
+![Login page](https://raw.githubusercontent.com/anupanupranjan-gif/nexarank-ui/main/docs/screenshots/login.png)
+
+### Merchandising Console
+![Rules console](https://raw.githubusercontent.com/anupanupranjan-gif/nexarank-ui/main/docs/screenshots/console.png)
+
+## Role Permissions
+
+| Action | VIEWER | MERCHANDISER | APPROVER | ADMIN |
+|--------|--------|-------------|---------|-------|
+| View rules | Yes | Yes | Yes | Yes |
+| Create rules | No | Yes | Yes | Yes |
+| Approve/reject | No | No | Yes | Yes |
+| Delete rules | No | No | Yes | Yes |
+| Manage users | No | No | No | Yes |
 
 ## Tech Stack
 
@@ -25,16 +48,24 @@ npm install
 npm start
 ```
 
-The app expects nexarank-api to be available at `/nexarank/api/v1`.
+The app expects nexarank-api at `/nexarank/api/v1`. For local dev, update the `API_BASE` constant in `src/pages/RulesConsole.js`.
+
+## Deployment
+
+```bash
+npm run build
+docker build -t nexarank-ui:latest .
+```
+
+See [nexarank-api](https://github.com/anupanupranjan-gif/nexarank-api) for the backend.
 
 ## Roadmap
 
-- [ ] Login page with JWT authentication
-- [ ] Role-based UI (Merchandiser, Approver, Admin views)
-- [ ] Approver queue for pending rules
-- [ ] Rule scheduling controls
-- [ ] Rule preview panel
+- [ ] Rule scheduling controls (activate/expire by date)
+- [ ] Rule preview panel (simulate results before activating)
 - [ ] Rule performance metrics dashboard
+- [ ] A/B test results view
+- [ ] Dark mode
 
 ## License
 
