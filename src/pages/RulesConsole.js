@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Anup Ranjan. Licensed under Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 import React, { useState, useEffect } from 'react';
 import UserManagement from './UserManagement';
+import FacetManager from './FacetManager';
 
 const API_BASE = '/nexarank/api/v1';
 const RULE_TYPES = ['BOOST', 'PIN', 'BURY', 'SYNONYM'];
@@ -153,9 +154,15 @@ export default function RulesConsole({ auth, onLogout }) {
           <button style={{...s.navTab, ...(activeTab === 'users' ? s.navTabActive : {})}}
             onClick={() => setActiveTab('users')}>User Management</button>
         )}
+        {isAdmin && (
+          <button style={{...s.navTab, ...(activeTab === 'facets' ? s.navTabActive : {})}}
+            onClick={() => setActiveTab('facets')}>Facet Manager</button>
+        )}
       </div>
 
-      {activeTab === 'users' ? (
+      {activeTab === 'facets' ? (
+        <FacetManager auth={auth} />
+      ) : activeTab === 'users' ? (
         <UserManagement auth={auth} />
       ) : (
         <>
