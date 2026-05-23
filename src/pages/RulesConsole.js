@@ -14,6 +14,8 @@ const emptyRule = {
   boostFactor: '',
   pinnedIds: '',
   synonyms: '',
+  activateAt: '',
+  expireAt: '',
 };
 
 export default function RulesConsole({ auth, onLogout }) {
@@ -72,7 +74,9 @@ export default function RulesConsole({ auth, onLogout }) {
         }),
         ...(form.type === 'SYNONYM' && {
           synonyms: form.synonyms.split(',').map(s => s.trim()).filter(Boolean)
-        })
+        }),
+        ...(form.activateAt && { activateAt: new Date(form.activateAt).toISOString() }),
+        ...(form.expireAt && { expireAt: new Date(form.expireAt).toISOString() })
       };
       await fetch(`${API_BASE}/rules`, {
         method: 'POST',
@@ -213,7 +217,7 @@ export default function RulesConsole({ auth, onLogout }) {
               <table style={s.table}>
                 <thead>
                   <tr>
-                    {['Type','Query','Details','Status','Submitted By','Actions'].map(h => (
+                    {['Type','Query','Details','Status','Schedule','Submitted By','Actions'].map(h => (
                       <th key={h} style={s.th}>{h}</th>
                     ))}
                   </tr>
@@ -230,6 +234,12 @@ export default function RulesConsole({ auth, onLogout }) {
                         <span style={{...s.badge, ...statusColor(rule.status)}}>
                           {rule.status || '—'}
                         </span>
+                      </td>
+                      <td style={{...s.td, fontSize: 11, color: '#6b7280'}}>
+                        {rule.activateAt ? `From: ${new Date(rule.activateAt).toLocaleDateString()}` : ''}
+                        {rule.activateAt && rule.expireAt ? <br/> : ''}
+                        {rule.expireAt ? `To: ${new Date(rule.expireAt).toLocaleDateString()}` : ''}
+                        {!rule.activateAt && !rule.expireAt ? '—' : ''}
                       </td>
                       <td style={{...s.td, fontSize: 12}}>{rule.submittedBy || '—'}</td>
                       <td style={s.td}>
