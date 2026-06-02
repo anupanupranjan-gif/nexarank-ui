@@ -4,6 +4,7 @@ import UserManagement from './UserManagement';
 import FacetManager from './FacetManager';
 import ClickIntelligence from './ClickIntelligence';
 import SearchQuality from './SearchQuality';
+import SearchEngineConfig from './SearchEngineConfig';
 
 const API_BASE = '/nexarank/api/v1';
 const RULE_TYPES = ['BOOST', 'PIN', 'BURY', 'SYNONYM'];
@@ -168,11 +169,15 @@ export default function RulesConsole({ auth, onLogout }) {
               onClick={() => setActiveTab('click-intelligence')}>Click Intelligence</button>
             <button style={{...s.navTab, ...(activeTab === 'search-quality' ? s.navTabActive : {})}}
               onClick={() => setActiveTab('search-quality')}>Search Quality</button>
+            <button style={{...s.navTab, ...(activeTab === 'engine-config' ? s.navTabActive : {})}}
+              onClick={() => setActiveTab('engine-config')}>Engine Config</button>
           </>
         )}
       </div>
 
-      {activeTab === 'click-intelligence' ? (
+      {activeTab === 'engine-config' ? (
+        <SearchEngineConfig auth={auth} />
+      ) : activeTab === 'click-intelligence' ? (
         <ClickIntelligence auth={auth} />
       ) : activeTab === 'search-quality' ? (
         <SearchQuality auth={auth} />
