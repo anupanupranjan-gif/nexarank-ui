@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import UserManagement from './UserManagement';
 import FacetManager from './FacetManager';
+import ClickIntelligence from './ClickIntelligence';
+import SearchQuality from './SearchQuality';
 
 const API_BASE = '/nexarank/api/v1';
 const RULE_TYPES = ['BOOST', 'PIN', 'BURY', 'SYNONYM'];
@@ -159,12 +161,22 @@ export default function RulesConsole({ auth, onLogout }) {
             onClick={() => setActiveTab('users')}>User Management</button>
         )}
         {isAdmin && (
-          <button style={{...s.navTab, ...(activeTab === 'facets' ? s.navTabActive : {})}}
-            onClick={() => setActiveTab('facets')}>Facet Manager</button>
+          <>
+            <button style={{...s.navTab, ...(activeTab === 'facets' ? s.navTabActive : {})}}
+              onClick={() => setActiveTab('facets')}>Facet Manager</button>
+            <button style={{...s.navTab, ...(activeTab === 'click-intelligence' ? s.navTabActive : {})}}
+              onClick={() => setActiveTab('click-intelligence')}>Click Intelligence</button>
+            <button style={{...s.navTab, ...(activeTab === 'search-quality' ? s.navTabActive : {})}}
+              onClick={() => setActiveTab('search-quality')}>Search Quality</button>
+          </>
         )}
       </div>
 
-      {activeTab === 'facets' ? (
+      {activeTab === 'click-intelligence' ? (
+        <ClickIntelligence auth={auth} />
+      ) : activeTab === 'search-quality' ? (
+        <SearchQuality auth={auth} />
+      ) : activeTab === 'facets' ? (
         <FacetManager auth={auth} />
       ) : activeTab === 'users' ? (
         <UserManagement auth={auth} />
