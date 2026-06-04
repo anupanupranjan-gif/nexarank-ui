@@ -184,7 +184,7 @@ export default function SearchEngineConfig({ auth }) {
           <button
             key={t.key}
             style={{...s.sectionTab, ...(activeSection === t.key ? s.sectionTabActive : {})}}
-            onClick={() => setActiveSection(t.key)}
+            onClick={() => { setActiveSection(t.key); if (t.key === 'fields' && fields.length === 0) fetchFields(); }}
           >{t.label}</button>
         ))}
       </div>
