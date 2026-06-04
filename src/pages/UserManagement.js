@@ -161,7 +161,7 @@ const styles = {
   th:        { textAlign: 'left', fontSize: 12, fontWeight: 600, color: '#6b7280', padding: '8px 12px', borderBottom: '1px solid #e5e7eb' },
   tr:        { borderBottom: '1px solid #f3f4f6' },
   td:        { padding: '10px 12px', fontSize: 14, color: '#111827', verticalAlign: 'middle' },
-  muted:     { color: '#9ca3af' },
+  muted:     { color: '#4b5563' },
   error:     { background: '#fee2e2', color: '#991b1b', padding: '8px 12px', borderRadius: 6, marginBottom: 12, fontSize: 14 },
   success:   { background: '#d1fae5', color: '#065f46', padding: '8px 12px', borderRadius: 6, marginBottom: 12, fontSize: 14 }
 };

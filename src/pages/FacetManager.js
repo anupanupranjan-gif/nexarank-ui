@@ -163,7 +163,7 @@ export default function FacetManager({ auth }) {
               <div key={field.fieldName} style={s.availableField}
                 onClick={() => addFacet(field)}>
                 <div style={{ fontWeight: 600, fontSize: 13 }}>{field.displayLabel}</div>
-                <div style={{ fontSize: 11, color: '#9ca3af' }}>
+                <div style={{ fontSize: 11, color: '#6b7280' }}>
                   {field.fieldName} · {field.facetType}
                 </div>
                 <span style={{...s.badge, ...typeColor(field.facetType)}}>
@@ -183,7 +183,7 @@ export default function FacetManager({ auth }) {
               Configured Facets
               {!loading && <span style={{ ...s.badge, marginLeft: 8, background: '#f3f4f6', color: '#374151' }}>{facets.length}</span>}
             </h3>
-            <div style={{ fontSize: 12, color: '#9ca3af' }}>Drag to reorder</div>
+            <div style={{ fontSize: 12, color: '#6b7280' }}>Drag to reorder</div>
           </div>
 
           {error && <div style={s.error}>{error}</div>}
@@ -193,7 +193,7 @@ export default function FacetManager({ auth }) {
             <div style={s.emptyState}>
               <div style={{ fontSize: 32, marginBottom: 8 }}>🔧</div>
               <div style={{ fontWeight: 600, color: '#374151' }}>No facets configured</div>
-              <div style={{ color: '#9ca3af', fontSize: 13, marginTop: 4 }}>Click fields on the left to add them</div>
+              <div style={{ color: '#4b5563', fontSize: 13, marginTop: 4 }}>Click fields on the left to add them</div>
             </div>
           ) : (
             facets.map((facet, index) => (
@@ -230,7 +230,7 @@ export default function FacetManager({ auth }) {
                       <span style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>
                         {facet.displayLabel}
                       </span>
-                      <span style={{ fontSize: 12, color: '#9ca3af' }}>({facet.fieldName})</span>
+                      <span style={{ fontSize: 12, color: '#6b7280' }}>({facet.fieldName})</span>
                       <button style={s.editBtn} onClick={() => { setEditingId(facet.id); setEditLabel(facet.displayLabel); }}>
                         ✏️
                       </button>
@@ -288,7 +288,7 @@ function typeColor(type) {
 const styles = {
   card:        { background: '#fff', borderRadius: 8, border: '1px solid #e5e7eb', padding: 24, marginBottom: 24 },
   panelTitle:  { margin: '0 0 4px', fontSize: 16, fontWeight: 600, color: '#111827' },
-  hint:        { margin: '0 0 12px', fontSize: 12, color: '#9ca3af' },
+  hint:        { margin: '0 0 12px', fontSize: 12, color: '#6b7280' },
   availableField: {
     border: '1px solid #e5e7eb', borderRadius: 6, padding: '10px 12px',
     marginBottom: 8, cursor: 'pointer', position: 'relative',
@@ -306,9 +306,9 @@ const styles = {
   btnDanger:   { background: '#fee2e2', color: '#991b1b', borderColor: '#fecaca' },
   editBtn:     { background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, padding: '0 4px' },
   badge:       { display: 'inline-block', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 600 },
-  metaBadge:   { background: '#f3f4f6', color: '#6b7280', borderRadius: 4, padding: '2px 8px', fontSize: 11 },
+  metaBadge:   { background: '#e5e7eb', color: '#374151', borderRadius: 4, padding: '2px 8px', fontSize: 11 },
   checkLabel:  { fontSize: 12, color: '#374151', display: 'flex', alignItems: 'center', cursor: 'pointer' },
-  muted:       { color: '#9ca3af', fontSize: 14 },
+  muted:       { color: '#4b5563', fontSize: 14 },
   emptyState:  { textAlign: 'center', padding: '40px 20px' },
   error:       { background: '#fee2e2', color: '#991b1b', padding: '8px 12px', borderRadius: 6, marginBottom: 12, fontSize: 14 },
   successMsg:  { background: '#d1fae5', color: '#065f46', padding: '8px 12px', borderRadius: 6, marginBottom: 12, fontSize: 14 },

@@ -434,12 +434,12 @@ const s = {
   brandText: { flex: 1, minWidth: 0 },
   brandProduct: { fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' },
   brandSub:  { fontSize: '9px', color: 'rgba(0,180,255,0.7)', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '1px' },
-  hamburger: { background: 'none', border: 'none', color: 'rgba(107,140,186,0.7)', cursor: 'pointer', fontSize: '14px', padding: '4px', marginLeft: 'auto', flexShrink: 0, lineHeight: 1 },
+  hamburger: { background: 'none', border: 'none', color: 'rgba(160,185,220,0.85)', cursor: 'pointer', fontSize: '14px', padding: '4px', marginLeft: 'auto', flexShrink: 0, lineHeight: 1 },
 
   nav:       { flex: 1, padding: '12px 8px', overflowY: 'auto', overflowX: 'hidden' },
   navGroup:  { marginBottom: '20px' },
-  navGroupLabel: { fontSize: '9px', fontWeight: 700, color: 'rgba(0,180,255,0.5)', letterSpacing: '2px', textTransform: 'uppercase', padding: '0 8px', marginBottom: '6px' },
-  navItem:   { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '8px 8px', borderRadius: '8px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(107,140,186,0.8)', fontSize: '12px', textAlign: 'left', transition: 'all 0.15s', position: 'relative', whiteSpace: 'nowrap' },
+  navGroupLabel: { fontSize: '9px', fontWeight: 700, color: 'rgba(0,180,255,0.85)', letterSpacing: '2px', textTransform: 'uppercase', padding: '0 8px', marginBottom: '6px' },
+  navItem:   { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '8px 8px', borderRadius: '8px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(180,200,230,0.9)', fontSize: '12px', textAlign: 'left', transition: 'all 0.15s', position: 'relative', whiteSpace: 'nowrap' },
   navItemActive: { background: 'rgba(0,119,255,0.12)', color: '#4da6ff', borderLeft: '2px solid #0077ff' },
   navIcon:   { fontSize: '13px', flexShrink: 0, width: 16, textAlign: 'center' },
   navLabel:  { flex: 1, fontSize: '12px' },
@@ -450,7 +450,7 @@ const s = {
   userInfo:  { flex: 1, minWidth: 0 },
   userName:  { fontSize: '11px', color: '#e2e8f0', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   roleBadge: { display: 'inline-block', fontSize: '9px', fontWeight: 700, padding: '1px 6px', borderRadius: '10px', marginTop: '2px', letterSpacing: '0.5px' },
-  logoutBtn: { background: 'none', border: '1px solid rgba(107,140,186,0.2)', borderRadius: '6px', color: 'rgba(107,140,186,0.6)', cursor: 'pointer', fontSize: '14px', padding: '4px 8px', flexShrink: 0 },
+  logoutBtn: { background: 'none', border: '1px solid rgba(107,140,186,0.2)', borderRadius: '6px', color: 'rgba(160,185,220,0.85)', cursor: 'pointer', fontSize: '14px', padding: '4px 8px', flexShrink: 0 },
 
   // Main
   main:      { flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0 },
@@ -461,7 +461,7 @@ const s = {
   liveIndicator: { display: 'flex', alignItems: 'center', gap: '6px' },
   liveDot:   { width: 6, height: 6, borderRadius: '50%', background: '#00e676', boxShadow: '0 0 8px #00e676', animation: 'pulse 2s infinite' },
   liveText:  { fontSize: '11px', color: '#00e676', fontWeight: 600, letterSpacing: '1px' },
-  topBarTime:{ fontSize: '11px', color: 'rgba(107,140,186,0.6)', letterSpacing: '0.5px' },
+  topBarTime:{ fontSize: '11px', color: 'rgba(160,185,220,0.85)', letterSpacing: '0.5px' },
 
   content:   { flex: 1, padding: '24px', overflowY: 'auto' },
 
@@ -472,29 +472,29 @@ const s = {
   card:      { background: 'rgba(13,21,38,0.8)', border: '1px solid rgba(0,119,255,0.12)', borderRadius: '12px', padding: '20px 24px', marginBottom: '20px', backdropFilter: 'blur(4px)' },
   cardHeader:{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' },
   cardTitle: { fontSize: '14px', fontWeight: 700, color: '#e2e8f0', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '8px' },
-  cardHint:  { fontSize: '11px', color: 'rgba(107,140,186,0.6)' },
+  cardHint:  { fontSize: '11px', color: 'rgba(200,220,245,0.9)' },
   countBadge:{ background: 'rgba(0,119,255,0.15)', color: '#4da6ff', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', border: '1px solid rgba(0,119,255,0.2)' },
   refreshBtn:{ background: 'rgba(0,119,255,0.1)', border: '1px solid rgba(0,119,255,0.2)', color: '#4da6ff', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', cursor: 'pointer' },
 
   // Form
   formGrid:  { display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' },
   fieldGroup:{ display: 'flex', flexDirection: 'column', gap: '5px', flex: 1, minWidth: '140px' },
-  fieldLabel:{ fontSize: '10px', fontWeight: 700, color: 'rgba(0,180,255,0.6)', letterSpacing: '1.5px', textTransform: 'uppercase' },
-  input:     { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,119,255,0.2)', borderRadius: '6px', padding: '8px 10px', fontSize: '12px', color: '#e2e8f0', outline: 'none', fontFamily: 'inherit' },
+  fieldLabel:{ fontSize: '10px', fontWeight: 700, color: 'rgba(0,210,255,0.95)', letterSpacing: '1.5px', textTransform: 'uppercase' },
+  input:     { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,119,255,0.2)', borderRadius: '6px', padding: '8px 10px', fontSize: '12px', color: '#f0f4ff', outline: 'none', fontFamily: 'inherit' },
   select:    { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,119,255,0.2)', borderRadius: '6px', padding: '8px 10px', fontSize: '12px', color: '#e2e8f0', outline: 'none', fontFamily: 'inherit' },
   btn:       { background: 'linear-gradient(135deg, #0055cc, #0077ff)', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 20px', fontSize: '12px', cursor: 'pointer', fontWeight: 700, letterSpacing: '0.5px', boxShadow: '0 0 16px rgba(0,119,255,0.3)', fontFamily: 'inherit' },
 
   // Table
   tableWrap: { overflowX: 'auto' },
   table:     { width: '100%', borderCollapse: 'collapse', fontSize: '12px' },
-  th:        { textAlign: 'left', fontSize: '10px', fontWeight: 700, color: 'rgba(107,140,186,0.6)', padding: '8px 12px', borderBottom: '1px solid rgba(0,119,255,0.1)', letterSpacing: '1px', textTransform: 'uppercase' },
+  th:        { textAlign: 'left', fontSize: '10px', fontWeight: 700, color: 'rgba(180,200,230,0.9)', padding: '8px 12px', borderBottom: '1px solid rgba(0,119,255,0.1)', letterSpacing: '1px', textTransform: 'uppercase' },
   tr:        { borderBottom: '1px solid rgba(0,119,255,0.06)', transition: 'background 0.1s' },
   trEven:    { background: 'rgba(0,119,255,0.02)' },
-  td:        { padding: '10px 12px', color: '#c8d6e8', verticalAlign: 'middle' },
+  td:        { padding: '10px 12px', color: '#dde8f5', verticalAlign: 'middle' },
   queryText: { color: '#e2e8f0', fontWeight: 600 },
-  detailText:{ color: 'rgba(107,140,186,0.8)', fontSize: '11px' },
-  scheduleText: { color: 'rgba(107,140,186,0.6)', fontSize: '11px' },
-  submitterText: { color: 'rgba(107,140,186,0.7)', fontSize: '11px' },
+  detailText:{ color: 'rgba(180,200,230,0.9)', fontSize: '11px' },
+  scheduleText: { color: 'rgba(160,185,220,0.9)', fontSize: '11px' },
+  submitterText: { color: 'rgba(160,185,220,0.9)', fontSize: '11px' },
 
   typeBadge: { display: 'inline-block', borderRadius: '5px', padding: '2px 8px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px' },
   statusBadge:{ display: 'inline-block', borderRadius: '5px', padding: '2px 8px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px' },
@@ -510,6 +510,6 @@ const s = {
   loadingSpinner: { width: '16px', height: '16px', border: '2px solid rgba(0,119,255,0.2)', borderTopColor: '#0077ff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
   emptyState:{ padding: '48px', textAlign: 'center' },
   emptyIcon: { fontSize: '32px', marginBottom: '12px', opacity: 0.3 },
-  emptyTitle:{ fontSize: '16px', fontWeight: 700, color: 'rgba(107,140,186,0.5)', marginBottom: '6px' },
-  emptyHint: { fontSize: '13px', color: 'rgba(107,140,186,0.35)' },
+  emptyTitle:{ fontSize: '16px', fontWeight: 700, color: 'rgba(180,200,230,0.85)', marginBottom: '6px' },
+  emptyHint: { fontSize: '13px', color: 'rgba(160,185,220,0.7)' },
 };
