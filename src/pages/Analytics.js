@@ -131,6 +131,61 @@ export default function Analytics({ auth }) {
             )}
           </div>
 
+          {/* Zero Result Queries */}
+          <div style={s.section}>
+            <div style={s.sectionTitle}>
+              Zero Result Queries
+              {overview.zeroResultCount > 0 && (
+                <span style={s.alertBadge}>{overview.zeroResultCount} in last {days}d</span>
+              )}
+            </div>
+            {overview.topZeroResultQueries?.length === 0 ? (
+              <div style={s.empty}>No zero-result queries. Great search coverage!</div>
+            ) : (
+              <table style={s.table}>
+                <thead>
+                  <tr>
+                    <th style={s.th}>Query</th>
+                    <th style={s.th}>Occurrences</th>
+                    <th style={s.th}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(overview.topZeroResultQueries || []).map((q, i) => (
+                    <tr key={i} style={i % 2 === 0 ? s.trEven : {}}>
+                      <td style={s.td}><span style={s.queryText}>{q.query}</span></td>
+                      <td style={s.td}><span style={{...s.ctrBadge, background: '#ef4444'}}>{q.occurrences}</span></td>
+                      <td style={s.td}><span style={s.actionHint}>→ Create SYNONYM or check index coverage</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Search Quality Score */}
+          {(overview.latestNdcg10 || overview.latestMrr10) && (
+            <div style={s.section}>
+              <div style={s.sectionTitle}>Search Quality Score</div>
+              <div style={s.qualityGrid}>
+                <div style={s.qualityStat}>
+                  <div style={{...s.qualityValue, color: overview.latestNdcg10 >= 0.9 ? '#22c55e' : '#f97316'}}>{(overview.latestNdcg10 * 100).toFixed(1)}%</div>
+                  <div style={s.qualityLabel}>NDCG@10</div>
+                </div>
+                <div style={s.qualityStat}>
+                  <div style={{...s.qualityValue, color: overview.latestMrr10 >= 0.9 ? '#22c55e' : '#f97316'}}>{(overview.latestMrr10 * 100).toFixed(1)}%</div>
+                  <div style={s.qualityLabel}>MRR@10</div>
+                </div>
+                <div style={s.qualityStat}>
+                  <div style={{...s.qualityValue, color: '#94b4d4', fontSize: 14}}>
+                    {overview.latestQualityRunAt ? new Date(overview.latestQualityRunAt).toLocaleDateString() : 'N/A'}
+                  </div>
+                  <div style={s.qualityLabel}>Last Evaluation</div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Rules Summary */}
           <div style={s.section}>
             <div style={s.sectionTitle}>Rules Summary</div>
@@ -188,5 +243,11 @@ const s = {
   rulesStat:      { textAlign: 'center', padding: '12px 24px', background: 'rgba(0,0,0,0.2)', borderRadius: 8 },
   rulesNumber:    { fontSize: 28, fontWeight: 800, marginBottom: 4 },
   rulesLabel:     { fontSize: 12, color: '#64748b' },
+  alertBadge:    { fontSize: 11, background: '#ef4444', color: '#fff', padding: '2px 8px', borderRadius: 10, marginLeft: 8, fontWeight: 600 },
+  actionHint:    { fontSize: 11, color: '#64748b', fontStyle: 'italic' },
+  qualityGrid:   { display: 'flex', gap: 24 },
+  qualityStat:   { textAlign: 'center', padding: '12px 24px', background: 'rgba(0,0,0,0.2)', borderRadius: 8 },
+  qualityValue:  { fontSize: 28, fontWeight: 800, marginBottom: 4 },
+  qualityLabel:  { fontSize: 12, color: '#64748b' },
   pendingAlert:   { marginTop: 12, padding: '8px 14px', background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 7, fontSize: 13, color: '#fdba74' },
 };
