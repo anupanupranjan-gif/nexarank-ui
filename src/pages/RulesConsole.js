@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import UserManagement from './UserManagement';
 import AuditLog from './AuditLog';
+import Analytics from './Analytics';
 import UserGroups from './UserGroups';
 import FacetManager from './FacetManager';
 import ClickIntelligence from './ClickIntelligence';
@@ -27,6 +28,7 @@ const NAV_GROUPS = [
       { key: 'engine-config', label: 'Engine Config',   icon: '⛁', permission: 'ENGINE_CONFIG_VIEW' },
   ]},
   { label: 'INTELLIGENCE', items: [
+      { key: 'analytics',          label: 'Analytics',          icon: '▲', permission: 'CLICK_INTELLIGENCE_VIEW' },
       { key: 'click-intelligence', label: 'Click Intelligence', icon: '◎', permission: 'CLICK_INTELLIGENCE_VIEW' },
       { key: 'search-quality',     label: 'Search Quality',     icon: '◑', permission: 'SEARCH_QUALITY_VIEW' },
   ]},
@@ -256,6 +258,8 @@ export default function RulesConsole({ auth, onLogout }) {
             <FacetManager auth={auth} />
           ) : activeTab === 'users' ? (
             <UserManagement auth={auth} />
+          ) : activeTab === 'analytics' ? (
+            <Analytics auth={auth} />
           ) : activeTab === 'groups' ? (
             <UserGroups auth={auth} />
           ) : activeTab === 'audit' ? (
