@@ -82,6 +82,20 @@ export default function Analytics({ auth }) {
               <div style={s.kpiLabel}>Active Rules</div>
               <div style={s.kpiSub}>{overview.pendingRules} pending review</div>
             </div>
+            <div style={s.kpiCard}>
+              <div style={{ ...s.kpiValue, color: overview.zeroResultRate > 0.2 ? '#ef4444' : overview.zeroResultRate > 0.1 ? '#f97316' : '#22c55e' }}>
+                {overview.totalSearches > 0 ? `${(overview.zeroResultRate * 100).toFixed(1)}%` : 'N/A'}
+              </div>
+              <div style={s.kpiLabel}>Zero Result Rate</div>
+              <div style={s.kpiSub}>{overview.totalSearches || 0} total searches</div>
+            </div>
+            <div style={s.kpiCard}>
+              <div style={{ ...s.kpiValue, color: '#94b4d4' }}>
+                {overview.avgLatencyMs ? `${overview.avgLatencyMs}ms` : 'N/A'}
+              </div>
+              <div style={s.kpiLabel}>Avg Search Latency</div>
+              <div style={s.kpiSub}>{overview.avgLatencyMs < 500 ? 'Fast' : overview.avgLatencyMs < 1000 ? 'Normal' : 'Slow'}</div>
+            </div>
           </div>
 
           {/* Top Queries Table */}
@@ -223,7 +237,7 @@ const s = {
   periodBtnActive:{ background: 'rgba(0,119,255,0.2)', border: '1px solid rgba(0,119,255,0.4)', color: '#94b4d4' },
   loading:        { color: '#94b4d4', padding: 40, textAlign: 'center' },
   empty:          { color: '#64748b', padding: 20, textAlign: 'center', fontSize: 13 },
-  kpiGrid:        { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 },
+  kpiGrid:        { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 },
   kpiCard:        { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,119,255,0.15)', borderRadius: 10, padding: '20px 24px' },
   kpiValue:       { fontSize: 32, fontWeight: 800, color: '#e2e8f0', marginBottom: 4 },
   kpiLabel:       { fontSize: 13, fontWeight: 600, color: '#94b4d4', marginBottom: 2 },
