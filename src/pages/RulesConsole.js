@@ -43,6 +43,8 @@ export default function RulesConsole({ auth, onLogout }) {
   const [rules, setRules]         = useState([]);
   const [form, setForm]           = useState(emptyRule);
   const [activeTab, setActiveTab] = useState('all');
+  const [conflicts, setConflicts] = useState([]);
+  const [previewData, setPreviewData] = useState(null);
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState(null);
@@ -87,6 +89,14 @@ export default function RulesConsole({ auth, onLogout }) {
       setRules(await res.json());
     } catch (e) { setError('Failed to load rules'); }
     finally { setLoading(false); }
+  }
+
+  async function checkConflicts(query) {
+    if (!query) return;
+    try {
+      const res = await fetch(`${API_BASE}/rules/conflicts?query=${encodeURIComponent(query)}`, { headers: authHeaders() });
+      if (res.ok) setConflicts(await res.json());
+    } catch (e) {}
   }
 
   async function createRule() {
@@ -478,6 +488,8 @@ const s = {
   navLabel:  { flex: 1, fontSize: '12px' },
   navActiveDot: { width: 5, height: 5, borderRadius: '50%', background: '#0077ff', boxShadow: '0 0 6px #0077ff' },
 
+  conflictWarning: { marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 6 },
+  conflictItem:    { padding: '8px 12px', background: 'rgba(249,115,22,0.08)', border: '1px solid', borderRadius: 7, display: 'flex', alignItems: 'flex-start', gap: 6 },
   projectSwitcher: { padding: '8px 10px', borderBottom: '1px solid rgba(0,119,255,0.15)', marginBottom: 4 },
   projectLabel2:  { fontSize: 9, fontWeight: 700, color: 'rgba(0,180,255,0.7)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 4 },
   projectSelect:  { width: '100%', background: 'rgba(0,119,255,0.1)', border: '1px solid rgba(0,119,255,0.3)', color: '#e2e8f0', borderRadius: 6, padding: '5px 8px', fontSize: 12, cursor: 'pointer', outline: 'none' },
