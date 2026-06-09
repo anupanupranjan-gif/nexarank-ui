@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import UserManagement from './UserManagement';
 import AuditLog from './AuditLog';
+import UserGroups from './UserGroups';
 import FacetManager from './FacetManager';
 import ClickIntelligence from './ClickIntelligence';
 import SearchQuality from './SearchQuality';
@@ -31,6 +32,7 @@ const NAV_GROUPS = [
   ]},
   { label: 'ADMIN', items: [
       { key: 'users',  label: 'User Management', icon: '◈', permission: 'USER_MANAGEMENT' },
+      { key: 'groups', label: 'User Groups',       icon: '◉', permission: 'USER_MANAGEMENT' },
       { key: 'audit',  label: 'Audit Log',        icon: '📋', permission: 'AUDIT_LOG_VIEW' },
   ]},
 ];
@@ -43,6 +45,8 @@ export default function RulesConsole({ auth, onLogout }) {
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [projects, setProjects] = useState([]);
+  const [activeProject, setActiveProject] = useState(auth.projectId || 'main');
 
   const canCreate  = ['MERCHANDISER','APPROVER','ADMIN'].includes(auth.role);
   const canApprove = ['APPROVER','ADMIN'].includes(auth.role);
@@ -55,6 +59,21 @@ export default function RulesConsole({ auth, onLogout }) {
 
   function authHeaders() {
     return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth.token}` };
+  }
+
+  useEffect(() => { fetchProjects(); }, []);
+
+  async function fetchProjects() {
+    try {
+      const res = await fetch(`${API_BASE}/admin/tenants/${auth.tenantId}/projects`, { headers: authHeaders() });
+      if (res.ok) setProjects(await res.json());
+    } catch (e) { console.error('Failed to load projects', e); }
+  }
+
+  function handleProjectSwitch(projectId) {
+    setActiveProject(projectId);
+    auth.projectId = projectId;
+    fetchRules();
   }
 
   async function fetchRules() {
@@ -138,6 +157,20 @@ export default function RulesConsole({ auth, onLogout }) {
           </button>
         </div>
 
+        {/* Project Switcher */}
+        {sidebarOpen && projects.length > 1 && (
+          <div style={s.projectSwitcher}>
+            <div style={s.projectLabel2}>PROJECT</div>
+            <select
+              style={s.projectSelect}
+              value={activeProject}
+              onChange={e => handleProjectSwitch(e.target.value)}>
+              {projects.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
         {/* Nav groups */}
         <nav style={s.nav}>
           {visibleGroups.map(group => (
@@ -223,6 +256,8 @@ export default function RulesConsole({ auth, onLogout }) {
             <FacetManager auth={auth} />
           ) : activeTab === 'users' ? (
             <UserManagement auth={auth} />
+          ) : activeTab === 'groups' ? (
+            <UserGroups auth={auth} />
           ) : activeTab === 'audit' ? (
             <AuditLog auth={auth} />
           ) : (
@@ -439,6 +474,9 @@ const s = {
   navLabel:  { flex: 1, fontSize: '12px' },
   navActiveDot: { width: 5, height: 5, borderRadius: '50%', background: '#0077ff', boxShadow: '0 0 6px #0077ff' },
 
+  projectSwitcher: { padding: '8px 10px', borderBottom: '1px solid rgba(0,119,255,0.15)', marginBottom: 4 },
+  projectLabel2:  { fontSize: 9, fontWeight: 700, color: 'rgba(0,180,255,0.7)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 4 },
+  projectSelect:  { width: '100%', background: 'rgba(0,119,255,0.1)', border: '1px solid rgba(0,119,255,0.3)', color: '#e2e8f0', borderRadius: 6, padding: '5px 8px', fontSize: 12, cursor: 'pointer', outline: 'none' },
   tenantBadge: { fontSize: 10, color: '#64748b', marginTop: 1 },
   tenantContext: { display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,119,255,0.1)', border: '1px solid rgba(0,119,255,0.2)', borderRadius: 6, padding: '3px 10px' },
   tenantLabel:  { fontSize: 12, color: '#94b4d4', fontWeight: 600 },
