@@ -7,7 +7,15 @@ export default function App() {
   const [auth, setAuth] = useState(null);
 
   function handleLogin(data) {
-    setAuth({ token: data.token, username: data.username, role: data.role });
+    setAuth({
+      token: data.token,
+      username: data.username,
+      role: data.role,
+      tenantId: data.tenantId || 'default',
+      projectId: data.projectId || 'main',
+      groupId: data.groupId || '',
+      permissions: data.permissions || [],
+    });
   }
 
   function handleLogout() {

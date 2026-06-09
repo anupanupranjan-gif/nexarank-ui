@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Anup Ranjan. Licensed under Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 import React, { useState, useEffect } from 'react';
 import UserManagement from './UserManagement';
+import AuditLog from './AuditLog';
 import FacetManager from './FacetManager';
 import ClickIntelligence from './ClickIntelligence';
 import SearchQuality from './SearchQuality';
@@ -16,37 +17,22 @@ const emptyRule = {
 
 // ── NAV STRUCTURE ─────────────────────────────────────────────────────────────
 const NAV_GROUPS = [
-  {
-    label: 'Merchandising',
-    icon: '◈',
-    items: [
-      { key: 'all',     label: 'Rules',          icon: '⚡', roles: ['VIEWER','MERCHANDISER','APPROVER','ADMIN'] },
-      { key: 'pending', label: 'Pending Review',  icon: '◷', roles: ['APPROVER','ADMIN'] },
-    ]
-  },
-  {
-    label: 'Configuration',
-    icon: '⬡',
-    items: [
-      { key: 'facets',        label: 'Facet Manager',   icon: '▤', roles: ['ADMIN'] },
-      { key: 'engine-config', label: 'Engine Config',   icon: '⛁', roles: ['ADMIN'] },
-    ]
-  },
-  {
-    label: 'Analytics',
-    icon: '◉',
-    items: [
-      { key: 'click-intelligence', label: 'Click Intelligence', icon: '◎', roles: ['ADMIN'] },
-      { key: 'search-quality',     label: 'Search Quality',     icon: '◑', roles: ['ADMIN'] },
-    ]
-  },
-  {
-    label: 'Admin',
-    icon: '◆',
-    items: [
-      { key: 'users', label: 'User Management', icon: '◈', roles: ['ADMIN'] },
-    ]
-  },
+  { label: 'MERCHANDISING', items: [
+      { key: 'all',     label: 'Rules',          icon: '⚡', permission: 'RULES_VIEW' },
+      { key: 'pending', label: 'Pending Review',  icon: '◷', permission: 'RULES_APPROVE' },
+  ]},
+  { label: 'CONFIGURATION', items: [
+      { key: 'facets',        label: 'Facet Manager',   icon: '▤', permission: 'FACET_VIEW' },
+      { key: 'engine-config', label: 'Engine Config',   icon: '⛁', permission: 'ENGINE_CONFIG_VIEW' },
+  ]},
+  { label: 'INTELLIGENCE', items: [
+      { key: 'click-intelligence', label: 'Click Intelligence', icon: '◎', permission: 'CLICK_INTELLIGENCE_VIEW' },
+      { key: 'search-quality',     label: 'Search Quality',     icon: '◑', permission: 'SEARCH_QUALITY_VIEW' },
+  ]},
+  { label: 'ADMIN', items: [
+      { key: 'users',  label: 'User Management', icon: '◈', permission: 'USER_MANAGEMENT' },
+      { key: 'audit',  label: 'Audit Log',        icon: '📋', permission: 'AUDIT_LOG_VIEW' },
+  ]},
 ];
 
 export default function RulesConsole({ auth, onLogout }) {
@@ -124,9 +110,10 @@ export default function RulesConsole({ auth, onLogout }) {
     : rules;
 
   // Filter nav items by role
+  const hasPermission = (perm) => auth.permissions && auth.permissions.includes(perm);
   const visibleGroups = NAV_GROUPS.map(g => ({
     ...g,
-    items: g.items.filter(i => i.roles.includes(auth.role))
+    items: g.items.filter(i => !i.permission || hasPermission(i.permission))
   })).filter(g => g.items.length > 0);
 
   return (
@@ -185,6 +172,7 @@ export default function RulesConsole({ auth, onLogout }) {
           {sidebarOpen && (
             <div style={s.userInfo}>
               <div style={s.userName}>{auth.username}</div>
+              <div style={s.tenantBadge}>{auth.tenantId} / {auth.projectId}</div>
               <div style={{...s.roleBadge, ...roleColor(auth.role)}}>{auth.role}</div>
             </div>
           )}
@@ -206,6 +194,10 @@ export default function RulesConsole({ auth, onLogout }) {
             <div style={s.liveIndicator}>
               <span style={s.liveDot} />
               <span style={s.liveText}>Live</span>
+            </div>
+            <div style={s.tenantContext}>
+              <span style={s.tenantLabel}>{auth.tenantId}</span>
+              <span style={s.projectLabel}>{auth.projectId}</span>
             </div>
             <div style={s.topBarTime}>{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
           </div>
@@ -231,6 +223,8 @@ export default function RulesConsole({ auth, onLogout }) {
             <FacetManager auth={auth} />
           ) : activeTab === 'users' ? (
             <UserManagement auth={auth} />
+          ) : activeTab === 'audit' ? (
+            <AuditLog auth={auth} />
           ) : (
             <>
               {/* Create Rule Form */}
@@ -445,6 +439,10 @@ const s = {
   navLabel:  { flex: 1, fontSize: '12px' },
   navActiveDot: { width: 5, height: 5, borderRadius: '50%', background: '#0077ff', boxShadow: '0 0 6px #0077ff' },
 
+  tenantBadge: { fontSize: 10, color: '#64748b', marginTop: 1 },
+  tenantContext: { display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,119,255,0.1)', border: '1px solid rgba(0,119,255,0.2)', borderRadius: 6, padding: '3px 10px' },
+  tenantLabel:  { fontSize: 12, color: '#94b4d4', fontWeight: 600 },
+  projectLabel: { fontSize: 12, color: '#64748b', borderLeft: '1px solid rgba(0,119,255,0.2)', paddingLeft: 6 },
   userArea:  { display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', borderTop: '1px solid rgba(0,119,255,0.1)', background: 'rgba(0,0,0,0.2)' },
   userDot:   { width: 7, height: 7, borderRadius: '50%', background: '#00e676', boxShadow: '0 0 6px #00e676', flexShrink: 0 },
   userInfo:  { flex: 1, minWidth: 0 },
