@@ -16,6 +16,9 @@ export default function FacetManager({ auth }) {
   const [facets, setFacets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [engineFields, setEngineFields] = useState([]);
+  const [showFieldPicker, setShowFieldPicker] = useState(false);
+  const [fetchingFields, setFetchingFields] = useState(false);
   const [success, setSuccess] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editLabel, setEditLabel] = useState('');
@@ -29,6 +32,36 @@ export default function FacetManager({ auth }) {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${auth.token}`
     };
+  }
+
+  async function fetchEngineFields() {
+    setFetchingFields(true);
+    try {
+      const res = await fetch('/nexarank/api/v1/engine-config/fields', { headers: authHeaders() });
+      if (res.ok) {
+        const fields = await res.json();
+        setEngineFields(fields.filter(f => f.facetable));
+        setShowFieldPicker(true);
+      } else {
+        alert('No engine config found. Please configure the search engine first.');
+      }
+    } catch (e) { alert('Failed to fetch fields from search engine'); }
+    finally { setFetchingFields(false); }
+  }
+
+  async function importFieldAsFacet(field) {
+    const payload = {
+      field: field.name,
+      label: field.name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+      type: (field.type === 'double' || field.type === 'float' || field.type === 'integer') ? 'RANGE' :
+            field.type === 'boolean' ? 'BOOLEAN' : 'TERMS',
+      enabled: true,
+      sortOrder: 99
+    };
+    const res = await fetch('/nexarank/api/v1/facets', {
+      method: 'POST', headers: authHeaders(), body: JSON.stringify(payload)
+    });
+    if (res.ok) { fetchFacets(); }
   }
 
   async function fetchFacets() {
@@ -149,7 +182,38 @@ export default function FacetManager({ auth }) {
   const s = styles;
 
   return (
-    <div style={{ display: 'flex', gap: 24 }}>
+    <div>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16}}>
+        <div style={{fontSize:20, fontWeight:700, color:'#e2e8f0'}}>Facet Manager</div>
+        <button style={styles.fetchBtn} onClick={fetchEngineFields} disabled={fetchingFields}>
+          {fetchingFields ? 'Fetching...' : '⬇ Fetch Fields from Engine'}
+        </button>
+      </div>
+
+      {showFieldPicker && engineFields.length > 0 && (
+        <div style={styles.fieldPicker}>
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
+            <span style={{fontSize:13, fontWeight:600, color:'#94b4d4'}}>
+              Facetable Fields from Search Engine
+            </span>
+            <button style={{background:'none',border:'none',color:'#64748b',cursor:'pointer',fontSize:16}}
+              onClick={() => setShowFieldPicker(false)}>✕</button>
+          </div>
+          <div style={styles.fieldList}>
+            {engineFields.map(f => (
+              <div key={f.name} style={styles.fieldItem}>
+                <div>
+                  <span style={{fontSize:13, color:'#e2e8f0', fontWeight:500, marginRight:8}}>{f.name}</span>
+                  <span style={{fontSize:11, color:'#64748b', background:'rgba(0,0,0,0.2)', padding:'1px 6px', borderRadius:4}}>{f.type}</span>
+                </div>
+                <button style={styles.importBtn} onClick={() => importFieldAsFacet(f)}>+ Add</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 24 }}>
 
       {/* Left panel — available fields */}
       <div style={{ width: 260, flexShrink: 0 }}>
@@ -273,6 +337,7 @@ export default function FacetManager({ auth }) {
         </div>
       </div>
     </div>
+    </div>
   );
 }
 
@@ -286,6 +351,11 @@ function typeColor(type) {
 }
 
 const styles = {
+  fetchBtn:   { background: 'rgba(0,119,255,0.15)', border: '1px solid rgba(0,119,255,0.3)', color: '#94b4d4', padding: '7px 16px', borderRadius: 7, cursor: 'pointer', fontSize: 13, fontWeight: 600 },
+  fieldPicker:{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,119,255,0.25)', borderRadius: 10, padding: 16, marginBottom: 20 },
+  fieldList:  { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 },
+  fieldItem:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: 7, padding: '8px 12px' },
+  importBtn:  { fontSize: 11, background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', color: '#86efac', padding: '3px 8px', borderRadius: 5, cursor: 'pointer' },
   card:        { background: '#fff', borderRadius: 8, border: '1px solid #e5e7eb', padding: 24, marginBottom: 24 },
   panelTitle:  { margin: '0 0 4px', fontSize: 16, fontWeight: 600, color: '#111827' },
   hint:        { margin: '0 0 12px', fontSize: 12, color: '#6b7280' },
