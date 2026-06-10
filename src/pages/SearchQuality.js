@@ -144,8 +144,8 @@ export default function SearchQuality({ auth }) {
                   {Object.values(result.byMode).map((m, i) => (
                     <tr key={m.mode} style={i % 2 === 0 ? s.trEven : {}}>
                       <td style={s.td}>
-                        <span style={m.mode.includes('Hybrid') ? s.hybridBadge : s.bm25Badge}>
-                          {m.mode}
+                        <span style={(m.label || m.mode || '').includes('Hybrid') ? s.hybridBadge : s.bm25Badge}>
+                          {m.label || m.mode || ''}
                         </span>
                       </td>
                       <td style={s.td}>{fmt(m.ndcg5)}</td>
