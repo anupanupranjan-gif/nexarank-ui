@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Anup Ranjan. Licensed under Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import UserManagement from './UserManagement';
 import AuditLog from './AuditLog';
 import Analytics from './Analytics';
@@ -10,6 +10,8 @@ import FacetManager from './FacetManager';
 import ClickIntelligence from './ClickIntelligence';
 import SearchQuality from './SearchQuality';
 import SearchEngineConfig from './SearchEngineConfig';
+import AbTestingTab from '../components/AbTestingTab';
+import VersionHistoryTab from '../components/VersionHistoryTab';
 
 const API_BASE = '/nexarank/api/v1';
 const RULE_TYPES = ['BOOST', 'PIN', 'BURY', 'SYNONYM'];
@@ -19,11 +21,11 @@ const emptyRule = {
   boostFactor: '', pinnedIds: '', synonyms: '', activateAt: '', expireAt: '',
 };
 
-// ── NAV STRUCTURE ─────────────────────────────────────────────────────────────
 const NAV_GROUPS = [
   { label: 'MERCHANDISING', items: [
       { key: 'all',     label: 'Rules',          icon: '⚡', permission: 'RULES_VIEW' },
       { key: 'pending', label: 'Pending Review',  icon: '◷', permission: 'RULES_APPROVE' },
+      { key: 'ab-tests', label: 'A/B Tests', icon: '⚖', permission: 'RULES_VIEW' },
   ]},
   { label: 'CONFIGURATION', items: [
       { key: 'facets',        label: 'Facet Manager',   icon: '▤', permission: 'FACET_VIEW' },
@@ -38,23 +40,80 @@ const NAV_GROUPS = [
   ]},
   { label: 'ADMIN', items: [
       { key: 'users',  label: 'User Management', icon: '◈', permission: 'USER_MANAGEMENT' },
-      { key: 'groups', label: 'User Groups',       icon: '◉', permission: 'USER_MANAGEMENT' },
+      { key: 'groups', label: 'User Groups',      icon: '◉', permission: 'USER_MANAGEMENT' },
       { key: 'audit',  label: 'Audit Log',        icon: '📋', permission: 'AUDIT_LOG_VIEW' },
   ]},
 ];
 
+// ── VERSION HISTORY DRAWER ────────────────────────────────────────────────────
+
+function VersionDrawer({ rule, auth, onClose }) {
+  if (!rule) return null;
+
+  function authHeaders() {
+    return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth.token}` };
+  }
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div style={ds.backdrop} onClick={onClose} />
+
+      {/* Drawer */}
+      <div style={ds.drawer}>
+        <div style={ds.drawerHeader}>
+          <div style={ds.drawerTitle}>
+            <span style={ds.drawerIcon}>⏱</span>
+            Version History
+          </div>
+          <div style={ds.drawerMeta}>
+            <span style={{ ...s.typeBadge, ...typeColor(rule.type) }}>{rule.type}</span>
+            <span style={ds.drawerQuery}>{rule.query}</span>
+          </div>
+          <button style={ds.closeBtn} onClick={onClose}>✕</button>
+        </div>
+
+        <div style={ds.drawerBody}>
+          <VersionHistoryTab
+            ruleId={rule.id}
+            authHeaders={authHeaders}
+            onRestored={onClose}
+          />
+        </div>
+      </div>
+    </>
+  );
+}
+
+const ds = {
+  backdrop: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 40, backdropFilter: 'blur(2px)' },
+  drawer: { position: 'fixed', top: 0, right: 0, bottom: 0, width: 560, background: '#0a1020', borderLeft: '1px solid rgba(0,119,255,0.2)', zIndex: 50, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 32px rgba(0,0,0,0.5)' },
+  drawerHeader: { display: 'flex', alignItems: 'center', gap: 10, padding: '18px 20px', borderBottom: '1px solid rgba(0,119,255,0.15)', flexShrink: 0 },
+  drawerTitle: { fontSize: 14, fontWeight: 700, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 8, flex: 1 },
+  drawerIcon: { fontSize: 16 },
+  drawerMeta: { display: 'flex', alignItems: 'center', gap: 8 },
+  drawerQuery: { fontSize: 12, color: '#94a3b8', fontFamily: 'inherit' },
+  closeBtn: { background: 'none', border: '1px solid rgba(107,140,186,0.2)', borderRadius: 6, color: '#64748b', cursor: 'pointer', fontSize: 14, padding: '4px 8px', flexShrink: 0 },
+  drawerBody: { flex: 1, overflowY: 'auto', padding: '16px 20px' },
+};
+
+// ── MAIN COMPONENT ────────────────────────────────────────────────────────────
+
 export default function RulesConsole({ auth, onLogout }) {
-  const [rules, setRules]         = useState([]);
-  const [form, setForm]           = useState(emptyRule);
-  const [activeTab, setActiveTab] = useState('all');
-  const [conflicts, setConflicts] = useState([]);
+  const [rules, setRules]             = useState([]);
+  const [form, setForm]               = useState(emptyRule);
+  const [activeTab, setActiveTab]     = useState(
+    () => localStorage.getItem('nexarank_active_tab') || 'all'
+  );
+  const [conflicts, setConflicts]     = useState([]);
   const [previewData, setPreviewData] = useState(null);
-  const [loading, setLoading]     = useState(true);
-  const [saving, setSaving]       = useState(false);
-  const [error, setError]         = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [saving, setSaving]           = useState(false);
+  const [error, setError]             = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [projects, setProjects] = useState([]);
+  const [projects, setProjects]       = useState([]);
   const [activeProject, setActiveProject] = useState(auth.projectId || 'main');
+  const [historyRule, setHistoryRule] = useState(null); // rule whose history drawer is open
 
   const canCreate  = ['MERCHANDISER','APPROVER','ADMIN'].includes(auth.role);
   const canApprove = ['APPROVER','ADMIN'].includes(auth.role);
@@ -144,7 +203,6 @@ export default function RulesConsole({ auth, onLogout }) {
     ? rules.filter(r => r.status === 'PENDING_REVIEW')
     : rules;
 
-  // Filter nav items by role
   const hasPermission = (perm) => auth.permissions && auth.permissions.includes(perm);
   const visibleGroups = NAV_GROUPS.map(g => ({
     ...g,
@@ -153,13 +211,19 @@ export default function RulesConsole({ auth, onLogout }) {
 
   return (
     <div style={s.shell}>
-      {/* Background grid */}
       <div style={s.bgGrid} />
+
+      {/* VERSION HISTORY DRAWER */}
+      {historyRule && (
+        <VersionDrawer
+          rule={historyRule}
+          auth={auth}
+          onClose={() => { setHistoryRule(null); fetchRules(); }}
+        />
+      )}
 
       {/* SIDEBAR */}
       <aside style={{ ...s.sidebar, width: sidebarOpen ? 220 : 56 }}>
-
-        {/* Logo area */}
         <div style={s.logoArea}>
           <div style={s.mrMark}>MR</div>
           {sidebarOpen && (
@@ -173,49 +237,34 @@ export default function RulesConsole({ auth, onLogout }) {
           </button>
         </div>
 
-        {/* Project Switcher */}
         {sidebarOpen && projects.length > 1 && (
           <div style={s.projectSwitcher}>
             <div style={s.projectLabel2}>PROJECT</div>
-            <select
-              style={s.projectSelect}
-              value={activeProject}
+            <select style={s.projectSelect} value={activeProject}
               onChange={e => handleProjectSwitch(e.target.value)}>
-              {projects.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
+              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
         )}
-        {/* Nav groups */}
+
         <nav style={s.nav}>
           {visibleGroups.map(group => (
             <div key={group.label} style={s.navGroup}>
-              {sidebarOpen && (
-                <div style={s.navGroupLabel}>{group.label}</div>
-              )}
+              {sidebarOpen && <div style={s.navGroupLabel}>{group.label}</div>}
               {group.items.map(item => (
-                <button
-                  key={item.key}
-                  style={{
-                    ...s.navItem,
-                    ...(activeTab === item.key ? s.navItemActive : {}),
-                  }}
-                  onClick={() => setActiveTab(item.key)}
-                  title={!sidebarOpen ? item.label : undefined}
-                >
+                <button key={item.key}
+                  style={{ ...s.navItem, ...(activeTab === item.key ? s.navItemActive : {}) }}
+                  onClick={() => { setActiveTab(item.key); localStorage.setItem('nexarank_active_tab', item.key); }}
+                  title={!sidebarOpen ? item.label : undefined}>
                   <span style={s.navIcon}>{item.icon}</span>
                   {sidebarOpen && <span style={s.navLabel}>{item.label}</span>}
-                  {sidebarOpen && activeTab === item.key && (
-                    <span style={s.navActiveDot} />
-                  )}
+                  {sidebarOpen && activeTab === item.key && <span style={s.navActiveDot} />}
                 </button>
               ))}
             </div>
           ))}
         </nav>
 
-        {/* User area at bottom */}
         <div style={s.userArea}>
           <div style={s.userDot} />
           {sidebarOpen && (
@@ -233,8 +282,6 @@ export default function RulesConsole({ auth, onLogout }) {
 
       {/* MAIN CONTENT */}
       <main style={s.main}>
-
-        {/* Top bar */}
         <div style={s.topBar}>
           <div style={s.pageTitle}>
             {visibleGroups.flatMap(g => g.items).find(i => i.key === activeTab)?.label || 'Dashboard'}
@@ -252,7 +299,6 @@ export default function RulesConsole({ auth, onLogout }) {
           </div>
         </div>
 
-        {/* Error banner */}
         {error && (
           <div style={s.errorBanner}>
             <span>⚠ {error}</span>
@@ -260,7 +306,6 @@ export default function RulesConsole({ auth, onLogout }) {
           </div>
         )}
 
-        {/* CONTENT ROUTING */}
         <div style={s.content}>
           {activeTab === 'engine-config' ? (
             <SearchEngineConfig auth={auth} />
@@ -280,11 +325,12 @@ export default function RulesConsole({ auth, onLogout }) {
             <Analytics auth={auth} />
           ) : activeTab === 'groups' ? (
             <UserGroups auth={auth} />
+          ) : activeTab === 'ab-tests' ? (
+            <AbTestingTab auth={auth} />
           ) : activeTab === 'audit' ? (
             <AuditLog auth={auth} />
           ) : (
             <>
-              {/* Create Rule Form */}
               {canCreate && (
                 <div style={s.card}>
                   <div style={s.cardHeader}>
@@ -353,7 +399,6 @@ export default function RulesConsole({ auth, onLogout }) {
                 </div>
               )}
 
-              {/* Rules Table */}
               <div style={s.card}>
                 <div style={s.cardHeader}>
                   <div style={s.cardTitle}>
@@ -413,6 +458,13 @@ export default function RulesConsole({ auth, onLogout }) {
                                     {rule.enabled ? '⏸' : '▶'}
                                   </button>
                                 )}
+                                {/* Version History button */}
+                                <button
+                                  style={{...s.actionBtn, ...s.actionHistory}}
+                                  onClick={() => setHistoryRule(rule)}
+                                  title="Version history">
+                                  ⏱
+                                </button>
                                 {canDelete && (
                                   <button style={{...s.actionBtn, ...s.actionDelete}} onClick={() => deleteRule(rule.id)}>⌫</button>
                                 )}
@@ -433,7 +485,7 @@ export default function RulesConsole({ auth, onLogout }) {
   );
 }
 
-// ── HELPER FUNCTIONS ──────────────────────────────────────────────────────────
+// ── HELPERS ───────────────────────────────────────────────────────────────────
 
 function ruleDetails(rule) {
   if (rule.type === 'BOOST' || rule.type === 'BURY')
@@ -473,20 +525,15 @@ function roleColor(role) {
 
 // ── STYLES ────────────────────────────────────────────────────────────────────
 const s = {
-  // Layout
   shell:     { display: 'flex', minHeight: '100vh', background: '#080d1a', fontFamily: "'DM Mono', 'JetBrains Mono', monospace", position: 'relative', overflow: 'hidden' },
   bgGrid:    { position: 'fixed', inset: 0, backgroundImage: 'linear-gradient(rgba(0,119,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,119,255,0.04) 1px, transparent 1px)', backgroundSize: '40px 40px', pointerEvents: 'none', zIndex: 0 },
-
-  // Sidebar
   sidebar:   { display: 'flex', flexDirection: 'column', background: '#0a1020', borderRight: '1px solid rgba(0,119,255,0.15)', transition: 'width 0.25s ease', overflow: 'hidden', position: 'relative', zIndex: 10, flexShrink: 0, minHeight: '100vh' },
-
   logoArea:  { display: 'flex', alignItems: 'center', gap: '10px', padding: '18px 12px 16px', borderBottom: '1px solid rgba(0,119,255,0.1)', minHeight: 64 },
   mrMark:    { width: 32, height: 32, borderRadius: '8px', background: 'linear-gradient(135deg, #0055cc, #00b4ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '-0.5px', flexShrink: 0, boxShadow: '0 0 12px rgba(0,119,255,0.4)' },
   brandText: { flex: 1, minWidth: 0 },
   brandProduct: { fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' },
   brandSub:  { fontSize: '9px', color: 'rgba(0,180,255,0.7)', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '1px' },
   hamburger: { background: 'none', border: 'none', color: 'rgba(160,185,220,0.85)', cursor: 'pointer', fontSize: '14px', padding: '4px', marginLeft: 'auto', flexShrink: 0, lineHeight: 1 },
-
   nav:       { flex: 1, padding: '12px 8px', overflowY: 'auto', overflowX: 'hidden' },
   navGroup:  { marginBottom: '20px' },
   navGroupLabel: { fontSize: '9px', fontWeight: 700, color: 'rgba(0,180,255,0.85)', letterSpacing: '2px', textTransform: 'uppercase', padding: '0 8px', marginBottom: '6px' },
@@ -495,9 +542,6 @@ const s = {
   navIcon:   { fontSize: '13px', flexShrink: 0, width: 16, textAlign: 'center' },
   navLabel:  { flex: 1, fontSize: '12px' },
   navActiveDot: { width: 5, height: 5, borderRadius: '50%', background: '#0077ff', boxShadow: '0 0 6px #0077ff' },
-
-  conflictWarning: { marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 6 },
-  conflictItem:    { padding: '8px 12px', background: 'rgba(249,115,22,0.08)', border: '1px solid', borderRadius: 7, display: 'flex', alignItems: 'flex-start', gap: 6 },
   projectSwitcher: { padding: '8px 10px', borderBottom: '1px solid rgba(0,119,255,0.15)', marginBottom: 4 },
   projectLabel2:  { fontSize: 9, fontWeight: 700, color: 'rgba(0,180,255,0.7)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 4 },
   projectSelect:  { width: '100%', background: 'rgba(0,119,255,0.1)', border: '1px solid rgba(0,119,255,0.3)', color: '#e2e8f0', borderRadius: 6, padding: '5px 8px', fontSize: 12, cursor: 'pointer', outline: 'none' },
@@ -511,10 +555,7 @@ const s = {
   userName:  { fontSize: '11px', color: '#e2e8f0', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   roleBadge: { display: 'inline-block', fontSize: '9px', fontWeight: 700, padding: '1px 6px', borderRadius: '10px', marginTop: '2px', letterSpacing: '0.5px' },
   logoutBtn: { background: 'none', border: '1px solid rgba(107,140,186,0.2)', borderRadius: '6px', color: 'rgba(160,185,220,0.85)', cursor: 'pointer', fontSize: '14px', padding: '4px 8px', flexShrink: 0 },
-
-  // Main
   main:      { flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0 },
-
   topBar:    { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid rgba(0,119,255,0.1)', background: 'rgba(10,16,32,0.8)', backdropFilter: 'blur(8px)', position: 'sticky', top: 0, zIndex: 5 },
   pageTitle: { fontSize: '15px', fontWeight: 700, color: '#e2e8f0', letterSpacing: '0.5px' },
   topBarRight: { display: 'flex', alignItems: 'center', gap: '16px' },
@@ -522,29 +563,21 @@ const s = {
   liveDot:   { width: 6, height: 6, borderRadius: '50%', background: '#00e676', boxShadow: '0 0 8px #00e676', animation: 'pulse 2s infinite' },
   liveText:  { fontSize: '11px', color: '#00e676', fontWeight: 600, letterSpacing: '1px' },
   topBarTime:{ fontSize: '11px', color: 'rgba(160,185,220,0.85)', letterSpacing: '0.5px' },
-
   content:   { flex: 1, padding: '24px', overflowY: 'auto' },
-
   errorBanner: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,68,68,0.1)', border: '1px solid rgba(255,68,68,0.3)', color: '#ff6b6b', padding: '10px 16px', fontSize: '13px', margin: '0 24px 0' },
   errorDismiss: { background: 'none', border: 'none', color: '#ff6b6b', cursor: 'pointer', fontSize: '14px' },
-
-  // Cards
   card:      { background: 'rgba(13,21,38,0.8)', border: '1px solid rgba(0,119,255,0.12)', borderRadius: '12px', padding: '20px 24px', marginBottom: '20px', backdropFilter: 'blur(4px)' },
   cardHeader:{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' },
   cardTitle: { fontSize: '14px', fontWeight: 700, color: '#e2e8f0', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '8px' },
   cardHint:  { fontSize: '11px', color: 'rgba(200,220,245,0.9)' },
   countBadge:{ background: 'rgba(0,119,255,0.15)', color: '#4da6ff', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', border: '1px solid rgba(0,119,255,0.2)' },
   refreshBtn:{ background: 'rgba(0,119,255,0.1)', border: '1px solid rgba(0,119,255,0.2)', color: '#4da6ff', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', cursor: 'pointer' },
-
-  // Form
   formGrid:  { display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' },
   fieldGroup:{ display: 'flex', flexDirection: 'column', gap: '5px', flex: 1, minWidth: '140px' },
   fieldLabel:{ fontSize: '10px', fontWeight: 700, color: 'rgba(0,210,255,0.95)', letterSpacing: '1.5px', textTransform: 'uppercase' },
   input:     { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,119,255,0.2)', borderRadius: '6px', padding: '8px 10px', fontSize: '12px', color: '#f0f4ff', outline: 'none', fontFamily: 'inherit' },
   select:    { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,119,255,0.2)', borderRadius: '6px', padding: '8px 10px', fontSize: '12px', color: '#e2e8f0', outline: 'none', fontFamily: 'inherit' },
   btn:       { background: 'linear-gradient(135deg, #0055cc, #0077ff)', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 20px', fontSize: '12px', cursor: 'pointer', fontWeight: 700, letterSpacing: '0.5px', boxShadow: '0 0 16px rgba(0,119,255,0.3)', fontFamily: 'inherit' },
-
-  // Table
   tableWrap: { overflowX: 'auto' },
   table:     { width: '100%', borderCollapse: 'collapse', fontSize: '12px' },
   th:        { textAlign: 'left', fontSize: '10px', fontWeight: 700, color: 'rgba(180,200,230,0.9)', padding: '8px 12px', borderBottom: '1px solid rgba(0,119,255,0.1)', letterSpacing: '1px', textTransform: 'uppercase' },
@@ -555,21 +588,20 @@ const s = {
   detailText:{ color: 'rgba(180,200,230,0.9)', fontSize: '11px' },
   scheduleText: { color: 'rgba(160,185,220,0.9)', fontSize: '11px' },
   submitterText: { color: 'rgba(160,185,220,0.9)', fontSize: '11px' },
-
   typeBadge: { display: 'inline-block', borderRadius: '5px', padding: '2px 8px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px' },
   statusBadge:{ display: 'inline-block', borderRadius: '5px', padding: '2px 8px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px' },
-
   actionGroup:{ display: 'flex', gap: '4px' },
   actionBtn: { background: 'rgba(107,140,186,0.1)', border: '1px solid rgba(107,140,186,0.2)', color: '#6b8cba', borderRadius: '5px', padding: '4px 8px', fontSize: '12px', cursor: 'pointer' },
   actionApprove: { background: 'rgba(0,230,118,0.1)', border: '1px solid rgba(0,230,118,0.25)', color: '#00e676' },
   actionReject:  { background: 'rgba(255,68,68,0.1)',  border: '1px solid rgba(255,68,68,0.25)', color: '#ff6b6b' },
   actionDelete:  { background: 'rgba(255,68,68,0.08)', border: '1px solid rgba(255,68,68,0.2)',  color: '#ff6b6b' },
-
-  // Loading / Empty
+  actionHistory: { background: 'rgba(0,180,255,0.08)', border: '1px solid rgba(0,180,255,0.2)', color: '#00b4ff' },
   loadingRow:{ display: 'flex', alignItems: 'center', gap: '12px', padding: '32px', color: 'rgba(107,140,186,0.6)', fontSize: '13px' },
   loadingSpinner: { width: '16px', height: '16px', border: '2px solid rgba(0,119,255,0.2)', borderTopColor: '#0077ff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
   emptyState:{ padding: '48px', textAlign: 'center' },
   emptyIcon: { fontSize: '32px', marginBottom: '12px', opacity: 0.3 },
   emptyTitle:{ fontSize: '16px', fontWeight: 700, color: 'rgba(180,200,230,0.85)', marginBottom: '6px' },
   emptyHint: { fontSize: '13px', color: 'rgba(160,185,220,0.7)' },
+  conflictWarning: { marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 6 },
+  conflictItem:    { padding: '8px 12px', background: 'rgba(249,115,22,0.08)', border: '1px solid', borderRadius: 7, display: 'flex', alignItems: 'flex-start', gap: 6 },
 };

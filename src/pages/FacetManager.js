@@ -50,10 +50,11 @@ export default function FacetManager({ auth }) {
   }
 
   async function importFieldAsFacet(field) {
+    const label = field.name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     const payload = {
-      field: field.name,
-      label: field.name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-      type: (field.type === 'double' || field.type === 'float' || field.type === 'integer') ? 'RANGE' :
+      fieldName: field.name,
+      displayLabel: label,
+      facetType: (field.type === 'double' || field.type === 'float' || field.type === 'integer') ? 'RANGE' :
             field.type === 'boolean' ? 'BOOLEAN' : 'TERMS',
       enabled: true,
       sortOrder: 99
@@ -200,15 +201,21 @@ export default function FacetManager({ auth }) {
               onClick={() => setShowFieldPicker(false)}>✕</button>
           </div>
           <div style={styles.fieldList}>
-            {engineFields.map(f => (
-              <div key={f.name} style={styles.fieldItem}>
-                <div>
-                  <span style={{fontSize:13, color:'#e2e8f0', fontWeight:500, marginRight:8}}>{f.name}</span>
-                  <span style={{fontSize:11, color:'#64748b', background:'rgba(0,0,0,0.2)', padding:'1px 6px', borderRadius:4}}>{f.type}</span>
+            {engineFields.map(f => {
+              const alreadyAdded = facets.some(fc => fc.fieldName === f.name);
+              return (
+                <div key={f.name} style={{...styles.fieldItem, opacity: alreadyAdded ? 0.4 : 1}}>
+                  <div>
+                    <span style={{fontSize:13, color:'#e2e8f0', fontWeight:500, marginRight:8}}>{f.name}</span>
+                    <span style={{fontSize:11, color:'#64748b', background:'rgba(0,0,0,0.2)', padding:'1px 6px', borderRadius:4}}>{f.type}</span>
+                  </div>
+                  {alreadyAdded
+                    ? <span style={{fontSize:11, color:'#64748b'}}>✓ Added</span>
+                    : <button style={styles.importBtn} onClick={() => importFieldAsFacet(f)}>+ Add</button>
+                  }
                 </div>
-                <button style={styles.importBtn} onClick={() => importFieldAsFacet(f)}>+ Add</button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -216,7 +223,7 @@ export default function FacetManager({ auth }) {
       <div style={{ display: 'flex', gap: 24 }}>
 
       {/* Left panel — available fields */}
-      <div style={{ width: 260, flexShrink: 0 }}>
+      <div style={{ width: 260, flexShrink: 0, display: 'none' }}>
         <div style={s.card}>
           <h3 style={s.panelTitle}>Available Fields</h3>
           <p style={s.hint}>Click a field to add it as a facet</p>
