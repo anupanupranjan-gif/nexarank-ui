@@ -31,7 +31,7 @@ const NAV_GROUPS = [
   ]},
   { label: 'INTELLIGENCE', items: [
       { key: 'analytics',          label: 'Analytics',          icon: '▲', permission: 'CLICK_INTELLIGENCE_VIEW' },
-      { key: 'ai-suggestions',     label: 'AI Suggestions',     icon: '✦', permission: 'RULES_CREATE' },
+      { key: 'ai-suggestions',     label: 'AI Suggestions',     icon: '✦', permission: 'CLICK_INTELLIGENCE_VIEW' },
       { key: 'click-intelligence', label: 'Click Intelligence', icon: '◎', permission: 'CLICK_INTELLIGENCE_VIEW' },
       { key: 'search-quality',     label: 'Search Quality',     icon: '◑', permission: 'SEARCH_QUALITY_VIEW' },
       { key: 'curation',           label: 'Quality Curation',   icon: '⊙', permission: 'SEARCH_QUALITY_RUN' },
