@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import UserManagement from './UserManagement';
 import AuditLog from './AuditLog';
 import Analytics from './Analytics';
+import SearchQualityCuration from './SearchQualityCuration';
 import UserGroups from './UserGroups';
 import FacetManager from './FacetManager';
 import ClickIntelligence from './ClickIntelligence';
@@ -31,6 +32,7 @@ const NAV_GROUPS = [
       { key: 'analytics',          label: 'Analytics',          icon: '▲', permission: 'CLICK_INTELLIGENCE_VIEW' },
       { key: 'click-intelligence', label: 'Click Intelligence', icon: '◎', permission: 'CLICK_INTELLIGENCE_VIEW' },
       { key: 'search-quality',     label: 'Search Quality',     icon: '◑', permission: 'SEARCH_QUALITY_VIEW' },
+      { key: 'curation',           label: 'Quality Curation',   icon: '⊙', permission: 'SEARCH_QUALITY_RUN' },
   ]},
   { label: 'ADMIN', items: [
       { key: 'users',  label: 'User Management', icon: '◈', permission: 'USER_MANAGEMENT' },
@@ -268,6 +270,8 @@ export default function RulesConsole({ auth, onLogout }) {
             <FacetManager auth={auth} />
           ) : activeTab === 'users' ? (
             <UserManagement auth={auth} />
+          ) : activeTab === 'curation' ? (
+            <SearchQualityCuration auth={auth} />
           ) : activeTab === 'analytics' ? (
             <Analytics auth={auth} />
           ) : activeTab === 'groups' ? (
