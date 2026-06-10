@@ -4,6 +4,7 @@ import UserManagement from './UserManagement';
 import AuditLog from './AuditLog';
 import Analytics from './Analytics';
 import SearchQualityCuration from './SearchQualityCuration';
+import AiSuggestions from './AiSuggestions';
 import UserGroups from './UserGroups';
 import FacetManager from './FacetManager';
 import ClickIntelligence from './ClickIntelligence';
@@ -30,6 +31,7 @@ const NAV_GROUPS = [
   ]},
   { label: 'INTELLIGENCE', items: [
       { key: 'analytics',          label: 'Analytics',          icon: '▲', permission: 'CLICK_INTELLIGENCE_VIEW' },
+      { key: 'ai-suggestions',     label: 'AI Suggestions',     icon: '✦', permission: 'RULES_CREATE' },
       { key: 'click-intelligence', label: 'Click Intelligence', icon: '◎', permission: 'CLICK_INTELLIGENCE_VIEW' },
       { key: 'search-quality',     label: 'Search Quality',     icon: '◑', permission: 'SEARCH_QUALITY_VIEW' },
       { key: 'curation',           label: 'Quality Curation',   icon: '⊙', permission: 'SEARCH_QUALITY_RUN' },
@@ -270,6 +272,8 @@ export default function RulesConsole({ auth, onLogout }) {
             <FacetManager auth={auth} />
           ) : activeTab === 'users' ? (
             <UserManagement auth={auth} />
+          ) : activeTab === 'ai-suggestions' ? (
+            <AiSuggestions auth={auth} />
           ) : activeTab === 'curation' ? (
             <SearchQualityCuration auth={auth} />
           ) : activeTab === 'analytics' ? (
