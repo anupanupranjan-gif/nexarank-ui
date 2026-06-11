@@ -110,6 +110,7 @@ export default function RulesConsole({ auth, onLogout }) {
   const [previewData, setPreviewData] = useState(null);
   const [loading, setLoading]         = useState(true);
   const [saving, setSaving]           = useState(false);
+  const [editingId, setEditingId]     = useState(null);
   const [error, setError]             = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [projects, setProjects]       = useState([]);
@@ -203,6 +204,57 @@ export default function RulesConsole({ auth, onLogout }) {
     if (!window.confirm('Delete this rule?')) return;
     await fetch(`${API_BASE}/rules/${id}`, { method: 'DELETE', headers: authHeaders() });
     fetchRules();
+  }
+
+  function startEdit(rule) {
+    setEditingId(rule.id);
+    setForm({
+      type: rule.type || 'BOOST',
+      query: rule.query || '',
+      boostField: rule.boostField || '',
+      boostValue: rule.boostValue || '',
+      boostFactor: rule.boostFactor || '',
+      pinnedIds: (rule.pinnedIds || []).join(', '),
+      synonyms: (rule.synonyms || []).join(', '),
+      activateAt: rule.activateAt ? rule.activateAt.slice(0, 16) : '',
+      expireAt: rule.expireAt ? rule.expireAt.slice(0, 16) : '',
+      triggerType: rule.triggerType || 'QUERY_ONLY',
+      triggerFacetField: rule.triggerFacetField || '',
+      triggerFacetValue: rule.triggerFacetValue || '',
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm(emptyRule);
+  }
+
+  async function saveEdit() {
+    setSaving(true);
+    try {
+      const payload = {
+        type: form.type, query: form.query,
+        ...(form.type === 'BOOST' && { boostField: form.boostField, boostValue: form.boostValue, boostFactor: parseFloat(form.boostFactor) || null }),
+        ...(form.type === 'PIN'   && { pinnedIds: form.pinnedIds.split(',').map(s=>s.trim()).filter(Boolean) }),
+        ...(form.type === 'BURY'  && { boostField: form.boostField, boostValue: form.boostValue, boostFactor: parseFloat(form.boostFactor) || null }),
+        ...(form.type === 'SYNONYM' && { synonyms: form.synonyms.split(',').map(s=>s.trim()).filter(Boolean) }),
+        triggerType: form.triggerType,
+        ...(form.triggerType !== 'QUERY_ONLY' && {
+          triggerFacetField: form.triggerFacetField,
+          triggerFacetValue: form.triggerFacetValue,
+        }),
+        ...(form.activateAt && { activateAt: new Date(form.activateAt).toISOString() }),
+        ...(form.expireAt   && { expireAt:   new Date(form.expireAt).toISOString() }),
+      };
+      await fetch(`${API_BASE}/rules/${editingId}`, {
+        method: 'PUT', headers: authHeaders(), body: JSON.stringify(payload)
+      });
+      setEditingId(null);
+      setForm(emptyRule);
+      fetchRules();
+    } catch (e) { setError('Failed to update rule'); }
+    finally { setSaving(false); }
   }
 
   const displayedRules = activeTab === 'pending'
@@ -340,8 +392,10 @@ export default function RulesConsole({ auth, onLogout }) {
               {canCreate && (
                 <div style={s.card}>
                   <div style={s.cardHeader}>
-                    <div style={s.cardTitle}>New Rule</div>
-                    <div style={s.cardHint}>Rules are queued for approval before going live</div>
+                    <div style={s.cardTitle}>{editingId ? '✎ Edit Rule' : 'New Rule'}</div>
+                    <div style={s.cardHint}>
+                      {editingId ? 'Editing will re-submit for approval' : 'Rules are queued for approval before going live'}
+                    </div>
                   </div>
                   <div style={s.formGrid}>
                     <div style={s.fieldGroup}>
@@ -423,10 +477,18 @@ export default function RulesConsole({ auth, onLogout }) {
                         onChange={e => setForm({...form, expireAt: e.target.value})} />
                     </div>
                   </div>
-                  <button style={{...s.btn, opacity: saving ? 0.6 : 1}}
-                    onClick={createRule} disabled={saving}>
-                    {saving ? 'Creating...' : '+ Create Rule'}
-                  </button>
+                  <div style={{display:'flex', gap:8}}>
+                    <button style={{...s.btn, opacity: saving ? 0.6 : 1}}
+                      onClick={editingId ? saveEdit : createRule} disabled={saving}>
+                      {saving ? 'Saving...' : editingId ? '✓ Save Changes' : '+ Create Rule'}
+                    </button>
+                    {editingId && (
+                      <button style={{...s.btn, background:'rgba(107,140,186,0.2)', boxShadow:'none'}}
+                        onClick={cancelEdit}>
+                        Cancel
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -480,7 +542,11 @@ export default function RulesConsole({ auth, onLogout }) {
                             <td style={{...s.td, ...s.submitterText}}>{rule.submittedBy || '—'}</td>
                             <td style={s.td}>
                               <div style={s.actionGroup}>
-                                {canApprove && rule.status === 'PENDING_REVIEW' && <>
+                                {canCreate && (
+                                  <button style={{...s.actionBtn, ...s.actionEdit}}
+                                    onClick={() => startEdit(rule)} title="Edit rule">✎</button>
+                                )}
+                              {canApprove && rule.status === 'PENDING_REVIEW' && <>
                                   <button style={{...s.actionBtn, ...s.actionApprove}} onClick={() => approveRule(rule.id)}>✓</button>
                                   <button style={{...s.actionBtn, ...s.actionReject}} onClick={() => rejectRule(rule.id)}>✕</button>
                                 </>}
@@ -633,6 +699,7 @@ const s = {
   actionReject:  { background: 'rgba(255,68,68,0.1)',  border: '1px solid rgba(255,68,68,0.25)', color: '#ff6b6b' },
   actionDelete:  { background: 'rgba(255,68,68,0.08)', border: '1px solid rgba(255,68,68,0.2)',  color: '#ff6b6b' },
   actionHistory: { background: 'rgba(0,180,255,0.08)', border: '1px solid rgba(0,180,255,0.2)', color: '#00b4ff' },
+  actionEdit:    { background: 'rgba(180,0,255,0.08)', border: '1px solid rgba(180,0,255,0.2)', color: '#d066ff' },
   loadingRow:{ display: 'flex', alignItems: 'center', gap: '12px', padding: '32px', color: 'rgba(107,140,186,0.6)', fontSize: '13px' },
   loadingSpinner: { width: '16px', height: '16px', border: '2px solid rgba(0,119,255,0.2)', borderTopColor: '#0077ff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
   emptyState:{ padding: '48px', textAlign: 'center' },
