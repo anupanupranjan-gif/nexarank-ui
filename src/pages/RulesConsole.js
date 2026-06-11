@@ -19,6 +19,7 @@ const RULE_TYPES = ['BOOST', 'PIN', 'BURY', 'SYNONYM'];
 const emptyRule = {
   type: 'BOOST', query: '', boostField: '', boostValue: '',
   boostFactor: '', pinnedIds: '', synonyms: '', activateAt: '', expireAt: '',
+  triggerType: 'QUERY_ONLY', triggerFacetField: '', triggerFacetValue: '',
 };
 
 const NAV_GROUPS = [
@@ -171,6 +172,11 @@ export default function RulesConsole({ auth, onLogout }) {
         ...(form.type === 'PIN'   && { pinnedIds: form.pinnedIds.split(',').map(s=>s.trim()).filter(Boolean) }),
         ...(form.type === 'BURY'  && { boostField: form.boostField, boostValue: form.boostValue, boostFactor: parseFloat(form.boostFactor) || null }),
         ...(form.type === 'SYNONYM' && { synonyms: form.synonyms.split(',').map(s=>s.trim()).filter(Boolean) }),
+        triggerType: form.triggerType,
+        ...(form.triggerType !== 'QUERY_ONLY' && {
+          triggerFacetField: form.triggerFacetField,
+          triggerFacetValue: form.triggerFacetValue,
+        }),
         ...(form.activateAt && { activateAt: new Date(form.activateAt).toISOString() }),
         ...(form.expireAt   && { expireAt:   new Date(form.expireAt).toISOString() }),
       };
@@ -350,6 +356,31 @@ export default function RulesConsole({ auth, onLogout }) {
                       <input style={s.input} placeholder="e.g. car battery" value={form.query}
                         onChange={e => setForm({...form, query: e.target.value})} />
                     </div>
+                    <div style={s.fieldGroup}>
+                      <label style={s.fieldLabel}>Trigger Type</label>
+                      <select style={s.select} value={form.triggerType}
+                        onChange={e => setForm({...form, triggerType: e.target.value})}>
+                        <option value="QUERY_ONLY">Query Only</option>
+                        <option value="FACET_SELECTED">Facet Selected</option>
+                        <option value="FACET_AND_QUERY">Facet + Query</option>
+                      </select>
+                    </div>
+                    {form.triggerType !== 'QUERY_ONLY' && (
+                      <>
+                        <div style={s.fieldGroup}>
+                          <label style={s.fieldLabel}>Trigger Facet Field</label>
+                          <input style={s.input} placeholder="e.g. category"
+                            value={form.triggerFacetField}
+                            onChange={e => setForm({...form, triggerFacetField: e.target.value})} />
+                        </div>
+                        <div style={s.fieldGroup}>
+                          <label style={s.fieldLabel}>Trigger Facet Value</label>
+                          <input style={s.input} placeholder="e.g. Battery"
+                            value={form.triggerFacetValue}
+                            onChange={e => setForm({...form, triggerFacetValue: e.target.value})} />
+                        </div>
+                      </>
+                    )}
                     {(form.type === 'BOOST' || form.type === 'BURY') && <>
                       <div style={s.fieldGroup}>
                         <label style={s.fieldLabel}>Boost Field</label>
@@ -488,11 +519,17 @@ export default function RulesConsole({ auth, onLogout }) {
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 
 function ruleDetails(rule) {
+  let detail = '';
   if (rule.type === 'BOOST' || rule.type === 'BURY')
-    return `${rule.boostField}: ${rule.boostValue} ×${rule.boostFactor}`;
-  if (rule.type === 'PIN')     return `Pins: ${(rule.pinnedIds||[]).join(', ')}`;
-  if (rule.type === 'SYNONYM') return `→ ${(rule.synonyms||[]).join(', ')}`;
-  return '—';
+    detail = `${rule.boostField}: ${rule.boostValue} ×${rule.boostFactor}`;
+  else if (rule.type === 'PIN')
+    detail = `Pins: ${(rule.pinnedIds||[]).join(', ')}`;
+  else if (rule.type === 'SYNONYM')
+    detail = `→ ${(rule.synonyms||[]).join(', ')}`;
+  if (rule.triggerType && rule.triggerType !== 'QUERY_ONLY') {
+    detail += ` | ${rule.triggerType === 'FACET_SELECTED' ? '⬡' : '⬡+Q'} ${rule.triggerFacetField}=${rule.triggerFacetValue}`;
+  }
+  return detail || '—';
 }
 
 function typeColor(type) {
