@@ -94,7 +94,7 @@ export default function AbTestingTab({ auth }) {
   const statusColor = (status) => ({
     RUNNING:   { background: 'rgba(0,230,118,0.12)', color: '#00e676', border: '1px solid rgba(0,230,118,0.3)' },
     COMPLETED: { background: 'rgba(0,119,255,0.12)', color: '#4da6ff', border: '1px solid rgba(0,119,255,0.3)' },
-    ARCHIVED:  { background: 'rgba(107,140,186,0.1)', color: '#6b8cba', border: '1px solid rgba(107,140,186,0.2)' },
+    ARCHIVED:  { background: 'rgba(107,140,186,0.1)', color: '#4a5568', border: '1px solid #e1e4e8' },
   }[status] || {});
 
   if (loading) return <div style={ab.muted}>Loading A/B tests…</div>;
@@ -187,7 +187,7 @@ export default function AbTestingTab({ auth }) {
                       </td>
                       <td style={ab.td}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                          <span style={{ color: leader === 'A' ? '#00e676' : '#e2e8f0', fontSize: 12, fontWeight: leader === 'A' ? 700 : 400 }}>
+                          <span style={{ color: leader === 'A' ? '#00e676' : '#1a202c', fontSize: 12, fontWeight: leader === 'A' ? 700 : 400 }}>
                             {leader === 'A' ? '▲ ' : ''}{ctr(t.clicksA, t.impressionsA)} CTR
                           </span>
                           <span style={ab.metaText}>{t.impressionsA} impr · {t.clicksA} clicks</span>
@@ -195,7 +195,7 @@ export default function AbTestingTab({ auth }) {
                       </td>
                       <td style={ab.td}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                          <span style={{ color: leader === 'B' ? '#00e676' : '#e2e8f0', fontSize: 12, fontWeight: leader === 'B' ? 700 : 400 }}>
+                          <span style={{ color: leader === 'B' ? '#00e676' : '#1a202c', fontSize: 12, fontWeight: leader === 'B' ? 700 : 400 }}>
                             {leader === 'B' ? '▲ ' : ''}{ctr(t.clicksB, t.impressionsB)} CTR
                           </span>
                           <span style={ab.metaText}>{t.impressionsB} impr · {t.clicksB} clicks</span>
@@ -224,7 +224,7 @@ export default function AbTestingTab({ auth }) {
                             </>
                           )}
                           {t.status !== 'RUNNING' && t.winnerId && (
-                            <span style={{ ...ab.badge, background: 'rgba(0,119,255,0.1)', color: '#4da6ff', border: '1px solid rgba(0,119,255,0.2)' }}>
+                            <span style={{ ...ab.badge, background: '#f0f6fc', color: '#4da6ff', border: '1px solid rgba(0,119,255,0.2)' }}>
                               Winner: {t.winnerId === t.ruleAId ? 'A' : 'B'}
                             </span>
                           )}
@@ -243,26 +243,26 @@ export default function AbTestingTab({ auth }) {
 }
 
 const ab = {
-  card:        { background: 'rgba(13,21,38,0.8)', border: '1px solid rgba(0,119,255,0.12)', borderRadius: 12, padding: '20px 24px', marginBottom: 20, backdropFilter: 'blur(4px)', fontFamily: "'DM Mono', 'JetBrains Mono', monospace" },
+  card:        { background: '#ffffff', border: '1px solid #e1e4e8', borderRadius: 12, padding: '20px 24px', marginBottom: 20, backdropFilter: 'blur(4px)', fontFamily: "'DM Mono', 'JetBrains Mono', monospace" },
   cardHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  cardTitle:   { fontSize: 14, fontWeight: 700, color: '#e2e8f0', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: 8 },
+  cardTitle:   { fontSize: 14, fontWeight: 700, color: '#1a202c', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: 8 },
   cardHint:    { fontSize: 11, color: 'rgba(200,220,245,0.9)' },
-  countBadge:  { background: 'rgba(0,119,255,0.15)', color: '#4da6ff', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, border: '1px solid rgba(0,119,255,0.2)' },
-  refreshBtn:  { background: 'rgba(0,119,255,0.1)', border: '1px solid rgba(0,119,255,0.2)', color: '#4da6ff', borderRadius: 6, padding: '5px 12px', fontSize: 12, cursor: 'pointer' },
+  countBadge:  { background: '#e8f0fe', color: '#4da6ff', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 10, border: '1px solid rgba(0,119,255,0.2)' },
+  refreshBtn:  { background: '#f0f6fc', border: '1px solid rgba(0,119,255,0.2)', color: '#4da6ff', borderRadius: 6, padding: '5px 12px', fontSize: 12, cursor: 'pointer' },
   formRow:     { display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' },
   fieldGroup:  { display: 'flex', flexDirection: 'column', gap: 5, flex: 1, minWidth: 200 },
   label:       { fontSize: 10, fontWeight: 700, color: 'rgba(0,210,255,0.95)', letterSpacing: '1.5px', textTransform: 'uppercase' },
-  select:      { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,119,255,0.2)', borderRadius: 6, padding: '8px 10px', fontSize: 12, color: '#e2e8f0', outline: 'none', fontFamily: 'inherit' },
+  select:      { background: '#ffffff', border: '1px solid rgba(0,119,255,0.2)', borderRadius: 6, padding: '8px 10px', fontSize: 12, color: '#1a202c', outline: 'none', fontFamily: 'inherit' },
   btn:         { background: 'linear-gradient(135deg, #0055cc, #0077ff)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 12, cursor: 'pointer', fontWeight: 700, letterSpacing: '0.5px', fontFamily: 'inherit', whiteSpace: 'nowrap' },
   table:       { width: '100%', borderCollapse: 'collapse', fontSize: 12 },
-  th:          { textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'rgba(180,200,230,0.9)', padding: '8px 12px', borderBottom: '1px solid rgba(0,119,255,0.1)', letterSpacing: '1px', textTransform: 'uppercase' },
+  th:          { textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'rgba(180,200,230,0.9)', padding: '8px 12px', borderBottom: '1px solid #e1e4e8', letterSpacing: '1px', textTransform: 'uppercase' },
   tr:          { borderBottom: '1px solid rgba(0,119,255,0.06)' },
-  trEven:      { background: 'rgba(0,119,255,0.02)' },
-  td:          { padding: '10px 12px', color: '#dde8f5', verticalAlign: 'middle' },
-  queryText:   { color: '#e2e8f0', fontWeight: 600 },
+  trEven:      { background: '#f8f9fa' },
+  td:          { padding: '10px 12px', color: '#1a202c', verticalAlign: 'middle' },
+  queryText:   { color: '#1a202c', fontWeight: 600 },
   metaText:    { color: '#64748b', fontSize: 11 },
   badge:       { display: 'inline-block', borderRadius: 5, padding: '2px 8px', fontSize: 10, fontWeight: 700, letterSpacing: '0.5px' },
-  actionBtn:   { background: 'rgba(107,140,186,0.1)', border: '1px solid rgba(107,140,186,0.2)', color: '#6b8cba', borderRadius: 5, padding: '4px 8px', fontSize: 12, cursor: 'pointer' },
+  actionBtn:   { background: 'rgba(107,140,186,0.1)', border: '1px solid #e1e4e8', color: '#4a5568', borderRadius: 5, padding: '4px 8px', fontSize: 12, cursor: 'pointer' },
   actionPromote: { background: 'rgba(0,230,118,0.1)', border: '1px solid rgba(0,230,118,0.25)', color: '#00e676' },
   empty:       { padding: '48px', textAlign: 'center' },
   muted:       { color: '#64748b', fontSize: 13, fontFamily: "'DM Mono', 'JetBrains Mono', monospace" },

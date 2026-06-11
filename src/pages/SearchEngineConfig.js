@@ -135,7 +135,7 @@ export default function SearchEngineConfig({ auth }) {
   function statusColor(status) {
     if (status === 'CONNECTED') return '#22c55e';
     if (status === 'FAILED') return '#ef4444';
-    return '#94a3b8';
+    return '#4a5568';
   }
 
   function statusDot(status) {
@@ -411,11 +411,11 @@ export default function SearchEngineConfig({ auth }) {
 const s = {
   container:       { padding: '24px', fontFamily: 'sans-serif', maxWidth: '900px' },
   header:          { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' },
-  title:           { fontSize: '22px', fontWeight: 700, color: '#e2e8f0' },
-  subtitle:        { fontSize: '13px', color: '#94b4d4', marginTop: '4px', lineHeight: '1.5' },
+  title:           { fontSize: '22px', fontWeight: 700, color: '#1a202c' },
+  subtitle:        { fontSize: '13px', color: '#4a5568', marginTop: '4px', lineHeight: '1.5' },
   statusBadge:     { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px' },
   dot:             { width: '8px', height: '8px', borderRadius: '50%', display: 'inline-block' },
-  loading:         { padding: '40px', textAlign: 'center', color: '#94b4d4' },
+  loading:         { padding: '40px', textAlign: 'center', color: '#4a5568' },
   successMsg:      { padding: '12px 16px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', color: '#16a34a', marginBottom: '16px', fontSize: '14px' },
   errorMsg:        { padding: '12px 16px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', color: '#dc2626', marginBottom: '16px', fontSize: '14px' },
   sectionTabs:     { display: 'flex', gap: '0', marginBottom: '20px', borderBottom: '2px solid #e2e8f0' },
@@ -441,12 +441,12 @@ const s = {
   btnSuccess:      { background: '#f0fdf4', border: '1px solid #86efac', color: '#16a34a' },
   lastTested:      { fontSize: '12px', color: '#334155', marginTop: '4px' },
   fieldsHeader:    { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' },
-  fieldsCount:     { fontSize: '14px', color: '#e2e8f0', fontWeight: 600 },
+  fieldsCount:     { fontSize: '14px', color: '#1a202c', fontWeight: 600 },
   table:           { width: '100%', borderCollapse: 'collapse', fontSize: '13px' },
-  th:              { padding: '10px 12px', textAlign: 'left', background: '#e2e8f0', borderBottom: '2px solid #cbd5e1', fontWeight: 600, color: '#1e293b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' },
+  th:              { padding: '10px 12px', textAlign: 'left', background: '#1a202c', borderBottom: '2px solid #cbd5e1', fontWeight: 600, color: '#1e293b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' },
   td:              { padding: '10px 12px', borderBottom: '1px solid #e2e8f0', verticalAlign: 'middle', color: '#0f172a' },
   trEven:          { background: '#fafafa' },
-  fieldName:       { fontFamily: 'monospace', fontWeight: 600, color: '#e2e8f0' },
+  fieldName:       { fontFamily: 'monospace', fontWeight: 600, color: '#1a202c' },
   typeBadge:       { background: '#1e40af', color: '#ffffff', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 600 },
   sampleValues:    { color: '#334155', fontSize: '12px' },
   empty:           { padding: '40px', textAlign: 'center', color: '#475569', fontSize: '14px', background: '#f8fafc', borderRadius: '8px', lineHeight: '1.8' },

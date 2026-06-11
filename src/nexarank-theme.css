@@ -1,71 +1,87 @@
 /* Modern Reliability — NexaRank SearchXM Theme */
 /* Copyright (c) 2026 Anup Ranjan. Licensed under Apache 2.0 */
-
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;600;700&display=swap');
 
-*, *::before, *::after {
-  box-sizing: border-box;
+/* ── CSS Variables ─────────────────────────────────────────── */
+:root {
+  --bg-page:        #f8f9fa;
+  --bg-card:        #ffffff;
+  --bg-card-alt:    #f8f9fa;
+  --bg-row-even:    #f8f9fa;
+  --bg-sidebar:     #f1f3f5;
+  --bg-input:       #ffffff;
+
+  --border:         #e1e4e8;
+  --border-strong:  #c8c8c8;
+
+  --text-primary:   #1a202c;
+  --text-secondary: #4a5568;
+  --text-muted:     #8a94a6;
+  --text-label:     #2d3748;
+
+  --accent:         #0366d6;
+  --accent-light:   #f0f6fc;
+  --accent-border:  #c8e1ff;
+
+  --success:        #00a854;
+  --warning:        #b45309;
+  --danger:         #c0392b;
 }
+
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
   margin: 0;
   padding: 0;
-  background: #080d1a;
-  color: #e2e8f0;
+  background: var(--bg-page);
+  color: var(--text-primary);
   font-family: 'DM Sans', sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Sidebar nav item hover */
-button:hover {
-  opacity: 0.9;
+/* ── Cards ─────────────────────────────────────────────────── */
+/* Any element with dark card background gets overridden */
+[style*="rgba(13,21,38"], [style*="#0d1526"], [style*="rgba(10,16,32"] {
+  background: var(--bg-card) !important;
+  border-color: var(--border) !important;
 }
 
-/* Spinner animation */
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+/* ── Typography overrides ──────────────────────────────────── */
+/* Titles and subtitles that are near-white on dark bg */
+[style*="color: #e2e8f0"], [style*="color:#e2e8f0"] { color: var(--text-primary) !important; }
+[style*="color: rgba(180,200,230"], [style*="color:rgba(180,200,230"] { color: var(--text-secondary) !important; }
+[style*="color: rgba(160,185,220"], [style*="color:rgba(160,185,220"] { color: var(--text-secondary) !important; }
+[style*="color: rgba(200,220,245"], [style*="color:rgba(200,220,245"] { color: var(--text-secondary) !important; }
 
-/* Live dot pulse */
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 6px #00e676; opacity: 1; }
-  50%       { box-shadow: 0 0 12px #00e676; opacity: 0.7; }
-}
+/* ── Tables ─────────────────────────────────────────────────── */
+tbody tr:nth-child(even) { background: var(--bg-row-even) !important; }
+tbody tr:hover { background: var(--accent-light) !important; }
 
-/* Sidebar item active glow */
-@keyframes glow {
-  0%, 100% { box-shadow: 0 0 8px rgba(0,119,255,0.3); }
-  50%       { box-shadow: 0 0 16px rgba(0,119,255,0.6); }
-}
+th { color: var(--text-label) !important; border-bottom: 2px solid var(--border) !important; }
+td { color: var(--text-primary) !important; }
 
-/* Input focus */
-input:focus, select:focus {
-  border-color: rgba(0,119,255,0.5) !important;
-  box-shadow: 0 0 0 2px rgba(0,119,255,0.1);
+/* ── Inputs and selects ─────────────────────────────────────── */
+input, select, textarea {
+  background: var(--bg-input) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
 }
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(3,102,214,0.1) !important;
+  outline: none;
+}
+input::placeholder { color: var(--text-muted) !important; }
 
-/* Scrollbar */
+/* ── Scrollbar ───────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
-::-webkit-scrollbar-thumb { background: rgba(0,119,255,0.2); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(0,119,255,0.4); }
+::-webkit-scrollbar-track { background: var(--bg-row-even); }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-/* Table row hover */
-tbody tr:hover {
-  background: rgba(0,119,255,0.04) !important;
-}
+/* ── Animations ──────────────────────────────────────────────── */
+@keyframes spin    { to { transform: rotate(360deg); } }
+@keyframes pulse   { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+@keyframes glow    { 0%,100% { box-shadow: 0 0 8px rgba(3,102,214,0.2); } 50% { box-shadow: 0 0 16px rgba(3,102,214,0.4); } }
 
-/* Button active state */
-button:active {
-  transform: translateY(1px);
-}
-
-/* Improve placeholder text visibility */
-input::placeholder, select::placeholder {
-  color: rgba(180, 200, 230, 0.5) !important;
-}
-
-/* Light card inputs */
-.light-card input::placeholder {
-  color: #94a3b8 !important;
-}
+button:active { transform: translateY(1px); }

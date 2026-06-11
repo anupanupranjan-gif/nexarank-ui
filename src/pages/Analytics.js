@@ -96,7 +96,7 @@ export default function Analytics({ auth }) {
               <div style={s.kpiSub}>{overview.zeroResultCount} zero-result searches</div>
             </div>
             <div style={s.kpiCard}>
-              <div style={{ ...s.kpiValue, color: '#94b4d4' }}>
+              <div style={{ ...s.kpiValue, color: '#4a5568' }}>
                 {overview.avgLatencyMs ? `${overview.avgLatencyMs}ms` : 'N/A'}
               </div>
               <div style={s.kpiLabel}>Avg Latency</div>
@@ -118,9 +118,9 @@ export default function Analytics({ auth }) {
                     <YAxis yAxisId="right" orientation="right" tickFormatter={formatPct} stroke="#64748b" fontSize={11} />
                     <Tooltip
                       contentStyle={{ background: '#0f1929', border: '1px solid rgba(0,119,255,0.3)', borderRadius: 8, fontSize: 12 }}
-                      labelStyle={{ color: '#94b4d4' }}
+                      labelStyle={{ color: '#4a5568' }}
                     />
-                    <Legend wrapperStyle={{ fontSize: 12, color: '#94b4d4' }} />
+                    <Legend wrapperStyle={{ fontSize: 12, color: '#4a5568' }} />
                     <Line yAxisId="left" type="monotone" dataKey="searches" stroke="#3b82f6" strokeWidth={2} dot={false} name="Searches" />
                     <Line yAxisId="right" type="monotone" dataKey="zeroResultRate" stroke="#ef4444" strokeWidth={2} dot={false} name="Zero Result Rate" tickFormatter={formatPct} />
                   </LineChart>
@@ -137,7 +137,7 @@ export default function Analytics({ auth }) {
                     <YAxis stroke="#64748b" fontSize={11} />
                     <Tooltip
                       contentStyle={{ background: '#0f1929', border: '1px solid rgba(0,119,255,0.3)', borderRadius: 8, fontSize: 12 }}
-                      labelStyle={{ color: '#94b4d4' }}
+                      labelStyle={{ color: '#4a5568' }}
                       formatter={formatMs}
                     />
                     <Bar dataKey="avgLatencyMs" fill="#8b5cf6" radius={[3,3,0,0]} name="Latency (ms)" />
@@ -165,7 +165,7 @@ export default function Analytics({ auth }) {
                   <div style={s.qualityLabel}>MRR@10</div>
                 </div>
                 <div style={s.qualityStat}>
-                  <div style={{...s.qualityValue, color: '#94b4d4', fontSize: 14}}>
+                  <div style={{...s.qualityValue, color: '#4a5568', fontSize: 14}}>
                     {overview.latestQualityRunAt ? new Date(overview.latestQualityRunAt).toLocaleDateString() : 'N/A'}
                   </div>
                   <div style={s.qualityLabel}>Last Evaluation</div>
@@ -257,40 +257,40 @@ export default function Analytics({ auth }) {
 const s = {
   page:           { padding: '28px 32px', minHeight: '100vh' },
   header:         { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
-  title:          { fontSize: 22, fontWeight: 700, color: '#e2e8f0', marginBottom: 4 },
-  subtitle:       { fontSize: 13, color: '#94b4d4' },
+  title:          { fontSize: 22, fontWeight: 700, color: '#1a202c', marginBottom: 4 },
+  subtitle:       { fontSize: 13, color: '#4a5568' },
   periodSelector: { display: 'flex', gap: 6 },
   periodBtn:      { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(0,119,255,0.2)', color: '#64748b', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 13 },
-  periodBtnActive:{ background: 'rgba(0,119,255,0.2)', border: '1px solid rgba(0,119,255,0.4)', color: '#94b4d4' },
-  loading:        { color: '#94b4d4', padding: 40, textAlign: 'center' },
+  periodBtnActive:{ background: 'rgba(0,119,255,0.2)', border: '1px solid rgba(0,119,255,0.4)', color: '#4a5568' },
+  loading:        { color: '#4a5568', padding: 40, textAlign: 'center' },
   empty:          { color: '#64748b', padding: 20, textAlign: 'center', fontSize: 13 },
   kpiGrid:        { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 },
-  kpiCard:        { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,119,255,0.15)', borderRadius: 10, padding: '20px 24px' },
-  kpiValue:       { fontSize: 32, fontWeight: 800, color: '#e2e8f0', marginBottom: 4 },
-  kpiLabel:       { fontSize: 13, fontWeight: 600, color: '#94b4d4', marginBottom: 2 },
+  kpiCard:        { background: '#ffffff', border: '1px solid #e1e4e8', borderRadius: 10, padding: '20px 24px' },
+  kpiValue:       { fontSize: 32, fontWeight: 800, color: '#1a202c', marginBottom: 4 },
+  kpiLabel:       { fontSize: 13, fontWeight: 600, color: '#4a5568', marginBottom: 2 },
   kpiSub:         { fontSize: 11, color: '#64748b' },
   chartsGrid:     { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 },
-  chartCard:      { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,119,255,0.15)', borderRadius: 10, padding: '16px 20px' },
-  chartTitle:     { fontSize: 13, fontWeight: 600, color: '#94b4d4', marginBottom: 12 },
-  section:        { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,119,255,0.15)', borderRadius: 10, padding: 20, marginBottom: 20 },
-  sectionTitle:   { fontSize: 15, fontWeight: 700, color: '#e2e8f0', marginBottom: 16 },
+  chartCard:      { background: '#ffffff', border: '1px solid #e1e4e8', borderRadius: 10, padding: '16px 20px' },
+  chartTitle:     { fontSize: 13, fontWeight: 600, color: '#4a5568', marginBottom: 12 },
+  section:        { background: '#ffffff', border: '1px solid #e1e4e8', borderRadius: 10, padding: 20, marginBottom: 20 },
+  sectionTitle:   { fontSize: 15, fontWeight: 700, color: '#1a202c', marginBottom: 16 },
   table:          { width: '100%', borderCollapse: 'collapse' },
-  th:             { padding: '8px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94b4d4', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(0,119,255,0.15)' },
-  td:             { padding: '10px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', verticalAlign: 'middle' },
-  trEven:         { background: 'rgba(255,255,255,0.02)' },
-  queryText:      { fontSize: 14, color: '#e2e8f0', fontWeight: 500 },
-  number:         { fontSize: 14, color: '#94b4d4', fontFamily: 'monospace' },
+  th:             { padding: '8px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e1e4e8' },
+  td:             { padding: '10px 12px', borderBottom: '1px solid #e1e4e8', verticalAlign: 'middle' },
+  trEven:         { background: '#f8f9fa' },
+  queryText:      { fontSize: 14, color: '#1a202c', fontWeight: 500 },
+  number:         { fontSize: 14, color: '#4a5568', fontFamily: 'monospace' },
   ctrBadge:       { fontSize: 12, fontWeight: 700, color: '#fff', padding: '2px 8px', borderRadius: 10 },
   ctrBar:         { height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 3, width: 100, overflow: 'hidden' },
   ctrBarFill:     { height: '100%', borderRadius: 3, transition: 'width 0.3s ease' },
   alertBadge:     { fontSize: 11, background: '#ef4444', color: '#fff', padding: '2px 8px', borderRadius: 10, marginLeft: 8, fontWeight: 600 },
   actionHint:     { fontSize: 11, color: '#64748b', fontStyle: 'italic' },
   qualityGrid:    { display: 'flex', gap: 24 },
-  qualityStat:    { textAlign: 'center', padding: '12px 24px', background: 'rgba(0,0,0,0.2)', borderRadius: 8 },
+  qualityStat:    { textAlign: 'center', padding: '12px 24px', background: '#f8f9fa', borderRadius: 8 },
   qualityValue:   { fontSize: 28, fontWeight: 800, marginBottom: 4 },
   qualityLabel:   { fontSize: 12, color: '#64748b' },
   rulesGrid:      { display: 'flex', gap: 24 },
-  rulesStat:      { textAlign: 'center', padding: '12px 24px', background: 'rgba(0,0,0,0.2)', borderRadius: 8 },
+  rulesStat:      { textAlign: 'center', padding: '12px 24px', background: '#f8f9fa', borderRadius: 8 },
   rulesNumber:    { fontSize: 28, fontWeight: 800, marginBottom: 4 },
   rulesLabel:     { fontSize: 12, color: '#64748b' },
   pendingAlert:   { marginTop: 12, padding: '8px 14px', background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 7, fontSize: 13, color: '#fdba74' },

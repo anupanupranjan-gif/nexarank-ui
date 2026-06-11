@@ -11,6 +11,7 @@ import ClickIntelligence from './ClickIntelligence';
 import SearchQuality from './SearchQuality';
 import SearchEngineConfig from './SearchEngineConfig';
 import AbTestingTab from '../components/AbTestingTab';
+import TriggerConditionBuilder from '../components/TriggerConditionBuilder';
 import VersionHistoryTab from '../components/VersionHistoryTab';
 
 const API_BASE = '/nexarank/api/v1';
@@ -19,7 +20,8 @@ const RULE_TYPES = ['BOOST', 'PIN', 'BURY', 'SYNONYM'];
 const emptyRule = {
   type: 'BOOST', query: '', boostField: '', boostValue: '',
   boostFactor: '', pinnedIds: '', synonyms: '', activateAt: '', expireAt: '',
-  triggerType: 'QUERY_ONLY', triggerFacetField: '', triggerFacetValue: '',
+  requireQuery: true,
+  triggerConditions: [],
 };
 
 const NAV_GROUPS = [
@@ -88,13 +90,13 @@ function VersionDrawer({ rule, auth, onClose }) {
 
 const ds = {
   backdrop: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 40, backdropFilter: 'blur(2px)' },
-  drawer: { position: 'fixed', top: 0, right: 0, bottom: 0, width: 560, background: '#0a1020', borderLeft: '1px solid rgba(0,119,255,0.2)', zIndex: 50, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 32px rgba(0,0,0,0.5)' },
-  drawerHeader: { display: 'flex', alignItems: 'center', gap: 10, padding: '18px 20px', borderBottom: '1px solid rgba(0,119,255,0.15)', flexShrink: 0 },
-  drawerTitle: { fontSize: 14, fontWeight: 700, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 8, flex: 1 },
+  drawer: { position: 'fixed', top: 0, right: 0, bottom: 0, width: 560, background: '#f1f3f5', borderLeft: '1px solid rgba(0,119,255,0.2)', zIndex: 50, display: 'flex', flexDirection: 'column', boxShadow: '-8px 0 32px rgba(0,0,0,0.5)' },
+  drawerHeader: { display: 'flex', alignItems: 'center', gap: 10, padding: '18px 20px', borderBottom: '1px solid #e1e4e8', flexShrink: 0 },
+  drawerTitle: { fontSize: 14, fontWeight: 700, color: '#1a202c', display: 'flex', alignItems: 'center', gap: 8, flex: 1 },
   drawerIcon: { fontSize: 16 },
   drawerMeta: { display: 'flex', alignItems: 'center', gap: 8 },
-  drawerQuery: { fontSize: 12, color: '#94a3b8', fontFamily: 'inherit' },
-  closeBtn: { background: 'none', border: '1px solid rgba(107,140,186,0.2)', borderRadius: 6, color: '#64748b', cursor: 'pointer', fontSize: 14, padding: '4px 8px', flexShrink: 0 },
+  drawerQuery: { fontSize: 12, color: '#4a5568', fontFamily: 'inherit' },
+  closeBtn: { background: 'none', border: '1px solid #e1e4e8', borderRadius: 6, color: '#64748b', cursor: 'pointer', fontSize: 14, padding: '4px 8px', flexShrink: 0 },
   drawerBody: { flex: 1, overflowY: 'auto', padding: '16px 20px' },
 };
 
@@ -173,11 +175,10 @@ export default function RulesConsole({ auth, onLogout }) {
         ...(form.type === 'PIN'   && { pinnedIds: form.pinnedIds.split(',').map(s=>s.trim()).filter(Boolean) }),
         ...(form.type === 'BURY'  && { boostField: form.boostField, boostValue: form.boostValue, boostFactor: parseFloat(form.boostFactor) || null }),
         ...(form.type === 'SYNONYM' && { synonyms: form.synonyms.split(',').map(s=>s.trim()).filter(Boolean) }),
-        triggerType: form.triggerType,
-        ...(form.triggerType !== 'QUERY_ONLY' && {
-          triggerFacetField: form.triggerFacetField,
-          triggerFacetValue: form.triggerFacetValue,
-        }),
+        requireQuery: form.requireQuery,
+        triggerConditions: form.triggerConditions.filter(
+          c => c.facetField && c.facetValues && c.facetValues.length > 0
+        ),
         ...(form.activateAt && { activateAt: new Date(form.activateAt).toISOString() }),
         ...(form.expireAt   && { expireAt:   new Date(form.expireAt).toISOString() }),
       };
@@ -218,9 +219,11 @@ export default function RulesConsole({ auth, onLogout }) {
       synonyms: (rule.synonyms || []).join(', '),
       activateAt: rule.activateAt ? rule.activateAt.slice(0, 16) : '',
       expireAt: rule.expireAt ? rule.expireAt.slice(0, 16) : '',
-      triggerType: rule.triggerType || 'QUERY_ONLY',
-      triggerFacetField: rule.triggerFacetField || '',
-      triggerFacetValue: rule.triggerFacetValue || '',
+      requireQuery: rule.requireQuery !== false,
+      triggerConditions: (rule.triggerConditions || []).map(c => ({
+        facetField: c.facetField || '',
+        facetValues: c.facetValues || [],
+      })),
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -239,11 +242,10 @@ export default function RulesConsole({ auth, onLogout }) {
         ...(form.type === 'PIN'   && { pinnedIds: form.pinnedIds.split(',').map(s=>s.trim()).filter(Boolean) }),
         ...(form.type === 'BURY'  && { boostField: form.boostField, boostValue: form.boostValue, boostFactor: parseFloat(form.boostFactor) || null }),
         ...(form.type === 'SYNONYM' && { synonyms: form.synonyms.split(',').map(s=>s.trim()).filter(Boolean) }),
-        triggerType: form.triggerType,
-        ...(form.triggerType !== 'QUERY_ONLY' && {
-          triggerFacetField: form.triggerFacetField,
-          triggerFacetValue: form.triggerFacetValue,
-        }),
+        requireQuery: form.requireQuery,
+        triggerConditions: form.triggerConditions.filter(
+          c => c.facetField && c.facetValues && c.facetValues.length > 0
+        ),
         ...(form.activateAt && { activateAt: new Date(form.activateAt).toISOString() }),
         ...(form.expireAt   && { expireAt:   new Date(form.expireAt).toISOString() }),
       };
@@ -410,31 +412,25 @@ export default function RulesConsole({ auth, onLogout }) {
                       <input style={s.input} placeholder="e.g. car battery" value={form.query}
                         onChange={e => setForm({...form, query: e.target.value})} />
                     </div>
-                    <div style={s.fieldGroup}>
-                      <label style={s.fieldLabel}>Trigger Type</label>
-                      <select style={s.select} value={form.triggerType}
-                        onChange={e => setForm({...form, triggerType: e.target.value})}>
-                        <option value="QUERY_ONLY">Query Only</option>
-                        <option value="FACET_SELECTED">Facet Selected</option>
-                        <option value="FACET_AND_QUERY">Facet + Query</option>
-                      </select>
+                    <div style={{...s.fieldGroup, flex: '100%', minWidth: '100%'}}>
+                      <label style={s.fieldLabel}>
+                        <input type="checkbox" checked={form.requireQuery}
+                          onChange={e => setForm({...form, requireQuery: e.target.checked})}
+                          style={{marginRight: 6}} />
+                        Require Query Match
+                        <span style={{color:'#64748b', fontWeight:400, marginLeft:8, fontSize:10}}>
+                          {form.requireQuery ? 'fires only when query matches' : 'fires on any query (category/brand pages)'}
+                        </span>
+                      </label>
                     </div>
-                    {form.triggerType !== 'QUERY_ONLY' && (
-                      <>
-                        <div style={s.fieldGroup}>
-                          <label style={s.fieldLabel}>Trigger Facet Field</label>
-                          <input style={s.input} placeholder="e.g. category"
-                            value={form.triggerFacetField}
-                            onChange={e => setForm({...form, triggerFacetField: e.target.value})} />
-                        </div>
-                        <div style={s.fieldGroup}>
-                          <label style={s.fieldLabel}>Trigger Facet Value</label>
-                          <input style={s.input} placeholder="e.g. Battery"
-                            value={form.triggerFacetValue}
-                            onChange={e => setForm({...form, triggerFacetValue: e.target.value})} />
-                        </div>
-                      </>
-                    )}
+                    <div style={{flex: '100%', minWidth: '100%'}}>
+                      <TriggerConditionBuilder
+                        query={form.query}
+                        conditions={form.triggerConditions}
+                        onChange={conditions => setForm({...form, triggerConditions: conditions})}
+                        authHeaders={authHeaders}
+                      />
+                    </div>
                     {(form.type === 'BOOST' || form.type === 'BURY') && <>
                       <div style={s.fieldGroup}>
                         <label style={s.fieldLabel}>Boost Field</label>
@@ -592,19 +588,25 @@ function ruleDetails(rule) {
     detail = `Pins: ${(rule.pinnedIds||[]).join(', ')}`;
   else if (rule.type === 'SYNONYM')
     detail = `→ ${(rule.synonyms||[]).join(', ')}`;
-  if (rule.triggerType && rule.triggerType !== 'QUERY_ONLY') {
-    detail += ` | ${rule.triggerType === 'FACET_SELECTED' ? '⬡' : '⬡+Q'} ${rule.triggerFacetField}=${rule.triggerFacetValue}`;
+  const conditions = rule.triggerConditions || [];
+  if (conditions.length > 0) {
+    const condStr = conditions
+      .filter(c => c.facetField)
+      .map(c => `${c.facetField}∈[${(c.facetValues||[]).join('|')}]`)
+      .join(' AND ');
+    if (condStr) detail += ` | ⬡ ${condStr}`;
   }
+  if (!rule.requireQuery) detail += ' | any query';
   return detail || '—';
 }
 
 function typeColor(type) {
   return {
-    BOOST:   { background: 'rgba(0,119,255,0.15)', color: '#4da6ff', border: '1px solid rgba(0,119,255,0.3)' },
+    BOOST:   { background: '#e8f0fe', color: '#4da6ff', border: '1px solid rgba(0,119,255,0.3)' },
     PIN:     { background: 'rgba(0,230,118,0.12)', color: '#00e676', border: '1px solid rgba(0,230,118,0.3)' },
     BURY:    { background: 'rgba(255,68,68,0.12)',  color: '#ff6b6b', border: '1px solid rgba(255,68,68,0.3)' },
     SYNONYM: { background: 'rgba(180,0,255,0.12)', color: '#d066ff', border: '1px solid rgba(180,0,255,0.3)' },
-  }[type] || { background: 'rgba(255,255,255,0.05)', color: '#6b8cba' };
+  }[type] || { background: 'rgba(255,255,255,0.05)', color: '#4a5568' };
 }
 
 function statusColor(status) {
@@ -612,100 +614,100 @@ function statusColor(status) {
     PENDING_REVIEW: { background: 'rgba(255,171,0,0.12)', color: '#ffab00', border: '1px solid rgba(255,171,0,0.3)' },
     APPROVED:       { background: 'rgba(0,230,118,0.12)', color: '#00e676', border: '1px solid rgba(0,230,118,0.3)' },
     REJECTED:       { background: 'rgba(255,68,68,0.12)',  color: '#ff6b6b', border: '1px solid rgba(255,68,68,0.3)' },
-    DISABLED:       { background: 'rgba(107,140,186,0.1)', color: '#6b8cba', border: '1px solid rgba(107,140,186,0.2)' },
+    DISABLED:       { background: 'rgba(107,140,186,0.1)', color: '#4a5568', border: '1px solid #e1e4e8' },
     DRAFT:          { background: 'rgba(0,180,255,0.1)',   color: '#00b4ff', border: '1px solid rgba(0,180,255,0.3)' },
-  }[status] || { background: 'rgba(255,255,255,0.05)', color: '#6b8cba' };
+  }[status] || { background: 'rgba(255,255,255,0.05)', color: '#4a5568' };
 }
 
 function roleColor(role) {
   return {
     ADMIN:        { background: 'rgba(255,68,68,0.15)',   color: '#ff6b6b' },
     APPROVER:     { background: 'rgba(0,230,118,0.15)',   color: '#00e676' },
-    MERCHANDISER: { background: 'rgba(0,119,255,0.15)',   color: '#4da6ff' },
-    VIEWER:       { background: 'rgba(107,140,186,0.15)', color: '#6b8cba' },
+    MERCHANDISER: { background: '#e8f0fe',   color: '#4da6ff' },
+    VIEWER:       { background: 'rgba(107,140,186,0.15)', color: '#4a5568' },
   }[role] || { background: 'rgba(255,255,255,0.1)', color: '#fff' };
 }
 
 // ── STYLES ────────────────────────────────────────────────────────────────────
 const s = {
-  shell:     { display: 'flex', minHeight: '100vh', background: '#080d1a', fontFamily: "'DM Mono', 'JetBrains Mono', monospace", position: 'relative', overflow: 'hidden' },
-  bgGrid:    { position: 'fixed', inset: 0, backgroundImage: 'linear-gradient(rgba(0,119,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,119,255,0.04) 1px, transparent 1px)', backgroundSize: '40px 40px', pointerEvents: 'none', zIndex: 0 },
-  sidebar:   { display: 'flex', flexDirection: 'column', background: '#0a1020', borderRight: '1px solid rgba(0,119,255,0.15)', transition: 'width 0.25s ease', overflow: 'hidden', position: 'relative', zIndex: 10, flexShrink: 0, minHeight: '100vh' },
-  logoArea:  { display: 'flex', alignItems: 'center', gap: '10px', padding: '18px 12px 16px', borderBottom: '1px solid rgba(0,119,255,0.1)', minHeight: 64 },
+  shell:     { display: 'flex', minHeight: '100vh', background: '#f8f9fa', fontFamily: "'DM Mono', 'JetBrains Mono', monospace", position: 'relative', overflow: 'hidden' },
+  bgGrid:    { display: 'none' },
+  sidebar:   { display: 'flex', flexDirection: 'column', background: '#f1f3f5', borderRight: '1px solid #e1e4e8', transition: 'width 0.25s ease', overflow: 'hidden', position: 'relative', zIndex: 10, flexShrink: 0, minHeight: '100vh' },
+  logoArea:  { display: 'flex', alignItems: 'center', gap: '10px', padding: '18px 12px 16px', borderBottom: '1px solid #e1e4e8', minHeight: 64 },
   mrMark:    { width: 32, height: 32, borderRadius: '8px', background: 'linear-gradient(135deg, #0055cc, #00b4ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '-0.5px', flexShrink: 0, boxShadow: '0 0 12px rgba(0,119,255,0.4)' },
   brandText: { flex: 1, minWidth: 0 },
-  brandProduct: { fontSize: '13px', fontWeight: 700, color: '#fff', letterSpacing: '0.5px' },
-  brandSub:  { fontSize: '9px', color: 'rgba(0,180,255,0.7)', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '1px' },
-  hamburger: { background: 'none', border: 'none', color: 'rgba(160,185,220,0.85)', cursor: 'pointer', fontSize: '14px', padding: '4px', marginLeft: 'auto', flexShrink: 0, lineHeight: 1 },
+  brandProduct: { fontSize: '13px', fontWeight: 700, color: '#1a202c', letterSpacing: '0.5px' },
+  brandSub:  { fontSize: '9px', color: '#8a94a6', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '1px' },
+  hamburger: { background: 'none', border: 'none', color: '#8a94a6', cursor: 'pointer', fontSize: '14px', padding: '4px', marginLeft: 'auto', flexShrink: 0, lineHeight: 1 },
   nav:       { flex: 1, padding: '12px 8px', overflowY: 'auto', overflowX: 'hidden' },
   navGroup:  { marginBottom: '20px' },
-  navGroupLabel: { fontSize: '9px', fontWeight: 700, color: 'rgba(0,180,255,0.85)', letterSpacing: '2px', textTransform: 'uppercase', padding: '0 8px', marginBottom: '6px' },
-  navItem:   { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '8px 8px', borderRadius: '8px', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(180,200,230,0.9)', fontSize: '12px', textAlign: 'left', transition: 'all 0.15s', position: 'relative', whiteSpace: 'nowrap' },
-  navItemActive: { background: 'rgba(0,119,255,0.12)', color: '#4da6ff', borderLeft: '2px solid #0077ff' },
+  navGroupLabel: { fontSize: '9px', fontWeight: 700, color: '#8a94a6', letterSpacing: '2px', textTransform: 'uppercase', padding: '0 8px', marginBottom: '6px' },
+  navItem:   { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '8px 8px', borderRadius: '8px', background: 'none', border: 'none', cursor: 'pointer', color: '#4a5568', fontSize: '12px', textAlign: 'left', transition: 'all 0.15s', position: 'relative', whiteSpace: 'nowrap' },
+  navItemActive: { background: '#f0f6fc', color: '#0077ff', borderLeft: '2px solid #0077ff' },
   navIcon:   { fontSize: '13px', flexShrink: 0, width: 16, textAlign: 'center' },
   navLabel:  { flex: 1, fontSize: '12px' },
   navActiveDot: { width: 5, height: 5, borderRadius: '50%', background: '#0077ff', boxShadow: '0 0 6px #0077ff' },
-  projectSwitcher: { padding: '8px 10px', borderBottom: '1px solid rgba(0,119,255,0.15)', marginBottom: 4 },
+  projectSwitcher: { padding: '8px 10px', borderBottom: '1px solid #e1e4e8', marginBottom: 4 },
   projectLabel2:  { fontSize: 9, fontWeight: 700, color: 'rgba(0,180,255,0.7)', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 4 },
-  projectSelect:  { width: '100%', background: 'rgba(0,119,255,0.1)', border: '1px solid rgba(0,119,255,0.3)', color: '#e2e8f0', borderRadius: 6, padding: '5px 8px', fontSize: 12, cursor: 'pointer', outline: 'none' },
+  projectSelect:  { width: '100%', background: '#f0f6fc', border: '1px solid rgba(0,119,255,0.3)', color: '#1a202c', borderRadius: 6, padding: '5px 8px', fontSize: 12, cursor: 'pointer', outline: 'none' },
   tenantBadge: { fontSize: 10, color: '#64748b', marginTop: 1 },
-  tenantContext: { display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,119,255,0.1)', border: '1px solid rgba(0,119,255,0.2)', borderRadius: 6, padding: '3px 10px' },
-  tenantLabel:  { fontSize: 12, color: '#94b4d4', fontWeight: 600 },
-  projectLabel: { fontSize: 12, color: '#64748b', borderLeft: '1px solid rgba(0,119,255,0.2)', paddingLeft: 6 },
-  userArea:  { display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', borderTop: '1px solid rgba(0,119,255,0.1)', background: 'rgba(0,0,0,0.2)' },
+  tenantContext: { display: 'flex', alignItems: 'center', gap: 6, background: '#f0f6fc', border: '1px solid #c8e1ff', borderRadius: 6, padding: '3px 10px' },
+  tenantLabel:  { fontSize: 12, color: '#0366d6', fontWeight: 600 },
+  projectLabel: { fontSize: 12, color: '#586069', borderLeft: '1px solid #c8e1ff', paddingLeft: 6 },
+  userArea:  { display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', borderTop: '1px solid #e1e4e8', background: '#f1f3f5' },
   userDot:   { width: 7, height: 7, borderRadius: '50%', background: '#00e676', boxShadow: '0 0 6px #00e676', flexShrink: 0 },
   userInfo:  { flex: 1, minWidth: 0 },
-  userName:  { fontSize: '11px', color: '#e2e8f0', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+  userName:  { fontSize: '11px', color: '#1a202c', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   roleBadge: { display: 'inline-block', fontSize: '9px', fontWeight: 700, padding: '1px 6px', borderRadius: '10px', marginTop: '2px', letterSpacing: '0.5px' },
-  logoutBtn: { background: 'none', border: '1px solid rgba(107,140,186,0.2)', borderRadius: '6px', color: 'rgba(160,185,220,0.85)', cursor: 'pointer', fontSize: '14px', padding: '4px 8px', flexShrink: 0 },
-  main:      { flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0 },
-  topBar:    { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid rgba(0,119,255,0.1)', background: 'rgba(10,16,32,0.8)', backdropFilter: 'blur(8px)', position: 'sticky', top: 0, zIndex: 5 },
-  pageTitle: { fontSize: '15px', fontWeight: 700, color: '#e2e8f0', letterSpacing: '0.5px' },
+  logoutBtn: { background: 'none', border: '1px solid #e1e4e8', borderRadius: '6px', color: '#8a94a6', cursor: 'pointer', fontSize: '14px', padding: '4px 8px', flexShrink: 0 },
+  main:      { flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1, minWidth: 0, background: '#f8f9fa' },
+  topBar:    { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid #e1e4e8', background: '#ffffff', position: 'sticky', top: 0, zIndex: 5 },
+  pageTitle: { fontSize: '15px', fontWeight: 700, color: '#1a202c', letterSpacing: '0.5px' },
   topBarRight: { display: 'flex', alignItems: 'center', gap: '16px' },
   liveIndicator: { display: 'flex', alignItems: 'center', gap: '6px' },
   liveDot:   { width: 6, height: 6, borderRadius: '50%', background: '#00e676', boxShadow: '0 0 8px #00e676', animation: 'pulse 2s infinite' },
-  liveText:  { fontSize: '11px', color: '#00e676', fontWeight: 600, letterSpacing: '1px' },
-  topBarTime:{ fontSize: '11px', color: 'rgba(160,185,220,0.85)', letterSpacing: '0.5px' },
-  content:   { flex: 1, padding: '24px', overflowY: 'auto' },
-  errorBanner: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,68,68,0.1)', border: '1px solid rgba(255,68,68,0.3)', color: '#ff6b6b', padding: '10px 16px', fontSize: '13px', margin: '0 24px 0' },
+  liveText:  { fontSize: '11px', color: '#00a854', fontWeight: 600, letterSpacing: '1px' },
+  topBarTime:{ fontSize: '11px', color: '#8a94a6', letterSpacing: '0.5px' },
+  content:   { flex: 1, padding: '24px', overflowY: 'auto', background: '#f8f9fa' },
+  errorBanner: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff5f5', border: '1px solid #fca5a5', color: '#c0392b', padding: '10px 16px', fontSize: '13px', margin: '0 24px 0' },
   errorDismiss: { background: 'none', border: 'none', color: '#ff6b6b', cursor: 'pointer', fontSize: '14px' },
-  card:      { background: 'rgba(13,21,38,0.8)', border: '1px solid rgba(0,119,255,0.12)', borderRadius: '12px', padding: '20px 24px', marginBottom: '20px', backdropFilter: 'blur(4px)' },
+  card:      { background: '#ffffff', border: '1px solid #e1e4e8', borderRadius: '12px', padding: '20px 24px', marginBottom: '20px', backdropFilter: 'none' },
   cardHeader:{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' },
-  cardTitle: { fontSize: '14px', fontWeight: 700, color: '#e2e8f0', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '8px' },
-  cardHint:  { fontSize: '11px', color: 'rgba(200,220,245,0.9)' },
-  countBadge:{ background: 'rgba(0,119,255,0.15)', color: '#4da6ff', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', border: '1px solid rgba(0,119,255,0.2)' },
-  refreshBtn:{ background: 'rgba(0,119,255,0.1)', border: '1px solid rgba(0,119,255,0.2)', color: '#4da6ff', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', cursor: 'pointer' },
+  cardTitle: { fontSize: '14px', fontWeight: 700, color: '#1a202c', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '8px' },
+  cardHint:  { fontSize: '11px', color: '#4a5568' },
+  countBadge:{ background: '#e8f0fe', color: '#4da6ff', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', border: '1px solid rgba(0,119,255,0.2)' },
+  refreshBtn:{ background: '#f0f6fc', border: '1px solid rgba(0,119,255,0.2)', color: '#4da6ff', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', cursor: 'pointer' },
   formGrid:  { display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' },
   fieldGroup:{ display: 'flex', flexDirection: 'column', gap: '5px', flex: 1, minWidth: '140px' },
-  fieldLabel:{ fontSize: '10px', fontWeight: 700, color: 'rgba(0,210,255,0.95)', letterSpacing: '1.5px', textTransform: 'uppercase' },
-  input:     { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,119,255,0.2)', borderRadius: '6px', padding: '8px 10px', fontSize: '12px', color: '#f0f4ff', outline: 'none', fontFamily: 'inherit' },
-  select:    { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,119,255,0.2)', borderRadius: '6px', padding: '8px 10px', fontSize: '12px', color: '#e2e8f0', outline: 'none', fontFamily: 'inherit' },
+  fieldLabel:{ fontSize: '10px', fontWeight: 700, color: '#2d3748', letterSpacing: '1.5px', textTransform: 'uppercase' },
+  input:     { background: '#ffffff', border: '1px solid rgba(0,119,255,0.2)', borderRadius: '6px', padding: '8px 10px', fontSize: '12px', color: '#1a202c', outline: 'none', fontFamily: 'inherit' },
+  select:    { background: '#ffffff', border: '1px solid rgba(0,119,255,0.2)', borderRadius: '6px', padding: '8px 10px', fontSize: '12px', color: '#1a202c', outline: 'none', fontFamily: 'inherit' },
   btn:       { background: 'linear-gradient(135deg, #0055cc, #0077ff)', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 20px', fontSize: '12px', cursor: 'pointer', fontWeight: 700, letterSpacing: '0.5px', boxShadow: '0 0 16px rgba(0,119,255,0.3)', fontFamily: 'inherit' },
   tableWrap: { overflowX: 'auto' },
   table:     { width: '100%', borderCollapse: 'collapse', fontSize: '12px' },
-  th:        { textAlign: 'left', fontSize: '10px', fontWeight: 700, color: 'rgba(180,200,230,0.9)', padding: '8px 12px', borderBottom: '1px solid rgba(0,119,255,0.1)', letterSpacing: '1px', textTransform: 'uppercase' },
-  tr:        { borderBottom: '1px solid rgba(0,119,255,0.06)', transition: 'background 0.1s' },
-  trEven:    { background: 'rgba(0,119,255,0.02)' },
-  td:        { padding: '10px 12px', color: '#dde8f5', verticalAlign: 'middle' },
-  queryText: { color: '#e2e8f0', fontWeight: 600 },
-  detailText:{ color: 'rgba(180,200,230,0.9)', fontSize: '11px' },
-  scheduleText: { color: 'rgba(160,185,220,0.9)', fontSize: '11px' },
-  submitterText: { color: 'rgba(160,185,220,0.9)', fontSize: '11px' },
+  th:        { textAlign: 'left', fontSize: '10px', fontWeight: 700, color: 'rgba(180,200,230,0.9)', padding: '8px 12px', borderBottom: '1px solid #e1e4e8', letterSpacing: '1px', textTransform: 'uppercase' },
+  tr:        { borderBottom: '1px solid #e1e4e8', transition: 'background 0.1s' },
+  trEven:    { background: '#f8f9fa' },
+  td:        { padding: '10px 12px', color: '#1a202c', verticalAlign: 'middle' },
+  queryText: { color: '#1a202c', fontWeight: 600 },
+  detailText:{ color: '#4a5568', fontSize: '11px' },
+  scheduleText: { color: '#4a5568', fontSize: '11px' },
+  submitterText: { color: '#4a5568', fontSize: '11px' },
   typeBadge: { display: 'inline-block', borderRadius: '5px', padding: '2px 8px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px' },
   statusBadge:{ display: 'inline-block', borderRadius: '5px', padding: '2px 8px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px' },
   actionGroup:{ display: 'flex', gap: '4px' },
-  actionBtn: { background: 'rgba(107,140,186,0.1)', border: '1px solid rgba(107,140,186,0.2)', color: '#6b8cba', borderRadius: '5px', padding: '4px 8px', fontSize: '12px', cursor: 'pointer' },
+  actionBtn: { background: 'rgba(107,140,186,0.1)', border: '1px solid #e1e4e8', color: '#4a5568', borderRadius: '5px', padding: '4px 8px', fontSize: '12px', cursor: 'pointer' },
   actionApprove: { background: 'rgba(0,230,118,0.1)', border: '1px solid rgba(0,230,118,0.25)', color: '#00e676' },
   actionReject:  { background: 'rgba(255,68,68,0.1)',  border: '1px solid rgba(255,68,68,0.25)', color: '#ff6b6b' },
   actionDelete:  { background: 'rgba(255,68,68,0.08)', border: '1px solid rgba(255,68,68,0.2)',  color: '#ff6b6b' },
   actionHistory: { background: 'rgba(0,180,255,0.08)', border: '1px solid rgba(0,180,255,0.2)', color: '#00b4ff' },
   actionEdit:    { background: 'rgba(180,0,255,0.08)', border: '1px solid rgba(180,0,255,0.2)', color: '#d066ff' },
-  loadingRow:{ display: 'flex', alignItems: 'center', gap: '12px', padding: '32px', color: 'rgba(107,140,186,0.6)', fontSize: '13px' },
+  loadingRow:{ display: 'flex', alignItems: 'center', gap: '12px', padding: '32px', color: '#4a5568', fontSize: '13px' },
   loadingSpinner: { width: '16px', height: '16px', border: '2px solid rgba(0,119,255,0.2)', borderTopColor: '#0077ff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
   emptyState:{ padding: '48px', textAlign: 'center' },
   emptyIcon: { fontSize: '32px', marginBottom: '12px', opacity: 0.3 },
-  emptyTitle:{ fontSize: '16px', fontWeight: 700, color: 'rgba(180,200,230,0.85)', marginBottom: '6px' },
-  emptyHint: { fontSize: '13px', color: 'rgba(160,185,220,0.7)' },
+  emptyTitle:{ fontSize: '16px', fontWeight: 700, color: '#1a202c', marginBottom: '6px' },
+  emptyHint: { fontSize: '13px', color: '#4a5568' },
   conflictWarning: { marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 6 },
   conflictItem:    { padding: '8px 12px', background: 'rgba(249,115,22,0.08)', border: '1px solid', borderRadius: 7, display: 'flex', alignItems: 'flex-start', gap: 6 },
 };

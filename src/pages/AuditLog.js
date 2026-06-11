@@ -41,7 +41,7 @@ export default function AuditLog({ auth }) {
     if (action.includes('REJECTED')) return '#ef4444';
     if (action.includes('DELETED')) return '#f97316';
     if (action.includes('UPDATED') || action.includes('SAVED')) return '#a855f7';
-    return '#94a3b8';
+    return '#4a5568';
   }
 
   return (
@@ -55,7 +55,7 @@ export default function AuditLog({ auth }) {
           <label style={s.toggle}>
             <input type="checkbox" checked={projectOnly}
               onChange={e => { setProjectOnly(e.target.checked); setPage(0); }} />
-            <span style={{ marginLeft: 6, color: '#94b4d4', fontSize: 13 }}>This project only</span>
+            <span style={{ marginLeft: 6, color: '#4a5568', fontSize: 13 }}>This project only</span>
           </label>
           <button style={s.refreshBtn} onClick={() => fetchAuditLog()}>↻ Refresh</button>
         </div>
@@ -117,26 +117,26 @@ export default function AuditLog({ auth }) {
 const s = {
   page:       { padding: '28px 32px', minHeight: '100vh', background: 'transparent' },
   header:     { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
-  title:      { fontSize: 22, fontWeight: 700, color: '#e2e8f0', marginBottom: 4 },
-  subtitle:   { fontSize: 13, color: '#94b4d4' },
+  title:      { fontSize: 22, fontWeight: 700, color: '#1a202c', marginBottom: 4 },
+  subtitle:   { fontSize: 13, color: '#4a5568' },
   controls:   { display: 'flex', alignItems: 'center', gap: 12 },
   toggle:     { display: 'flex', alignItems: 'center', cursor: 'pointer' },
-  refreshBtn: { background: 'rgba(0,119,255,0.15)', border: '1px solid rgba(0,119,255,0.3)', color: '#94b4d4', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 13 },
-  loading:    { color: '#94b4d4', padding: 40, textAlign: 'center' },
+  refreshBtn: { background: '#e8f0fe', border: '1px solid rgba(0,119,255,0.3)', color: '#4a5568', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 13 },
+  loading:    { color: '#4a5568', padding: 40, textAlign: 'center' },
   empty:      { color: '#64748b', padding: 40, textAlign: 'center' },
-  tableWrap:  { background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid rgba(0,119,255,0.15)', overflow: 'hidden' },
+  tableWrap:  { background: '#ffffff', borderRadius: 10, border: '1px solid #e1e4e8', overflow: 'hidden' },
   table:      { width: '100%', borderCollapse: 'collapse' },
-  th:         { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#94b4d4', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(0,119,255,0.15)', background: 'rgba(0,0,0,0.2)' },
-  td:         { padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.04)', verticalAlign: 'middle', color: '#e2e8f0' },
-  trEven:     { background: 'rgba(255,255,255,0.02)' },
+  th:         { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e1e4e8', background: '#f8f9fa' },
+  td:         { padding: '10px 14px', borderBottom: '1px solid #e1e4e8', verticalAlign: 'middle', color: '#1a202c' },
+  trEven:     { background: '#f8f9fa' },
   trOdd:      { background: 'transparent' },
-  timestamp:  { fontSize: 12, color: '#94b4d4', fontFamily: 'monospace' },
+  timestamp:  { fontSize: 12, color: '#4a5568', fontFamily: 'monospace' },
   actionBadge:{ padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 700, color: '#fff' },
-  entity:     { fontSize: 13, color: '#e2e8f0' },
+  entity:     { fontSize: 13, color: '#1a202c' },
   entityId:   { fontSize: 11, fontFamily: 'monospace', color: '#64748b' },
-  username:   { fontSize: 13, color: '#94b4d4', fontWeight: 600 },
+  username:   { fontSize: 13, color: '#4a5568', fontWeight: 600 },
   project:    { fontSize: 12, color: '#64748b' },
   pagination: { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, marginTop: 20 },
-  pageBtn:    { background: 'rgba(0,119,255,0.15)', border: '1px solid rgba(0,119,255,0.3)', color: '#94b4d4', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 13 },
-  pageInfo:   { color: '#94b4d4', fontSize: 13 },
+  pageBtn:    { background: '#e8f0fe', border: '1px solid rgba(0,119,255,0.3)', color: '#4a5568', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 13 },
+  pageInfo:   { color: '#4a5568', fontSize: 13 },
 };
