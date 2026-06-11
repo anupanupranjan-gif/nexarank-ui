@@ -285,16 +285,21 @@ export default function RulesConsole({ auth, onLogout }) {
       {/* SIDEBAR */}
       <aside style={{ ...s.sidebar, width: sidebarOpen ? 220 : 56 }}>
         <div style={s.logoArea}>
-          <div style={s.mrMark}>MR</div>
-          {sidebarOpen && (
-            <div style={s.brandText}>
-              <div style={s.brandProduct}>NexaRank</div>
-              <div style={s.brandSub}>by Modern Reliability</div>
+          {sidebarOpen ? (
+            <>
+              <div style={s.mrMark}>MR</div>
+              <div style={s.brandText}>
+                <div style={s.brandProduct}>NexaRank</div>
+                <div style={s.brandSub}>by Modern Reliability</div>
+              </div>
+              <button style={s.hamburger} onClick={() => setSidebarOpen(o => !o)} title="Collapse">←</button>
+            </>
+          ) : (
+            <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:8, width:'100%'}}>
+              <div style={s.mrMark}>MR</div>
+              <button style={s.hamburger} onClick={() => setSidebarOpen(o => !o)} title="Expand">☰</button>
             </div>
           )}
-          <button style={s.hamburger} onClick={() => setSidebarOpen(o => !o)}>
-            {sidebarOpen ? '←' : '☰'}
-          </button>
         </div>
 
         {sidebarOpen && projects.length > 1 && (
@@ -633,12 +638,12 @@ const s = {
   shell:     { display: 'flex', minHeight: '100vh', background: '#f8f9fa', fontFamily: "'DM Mono', 'JetBrains Mono', monospace", position: 'relative', overflow: 'hidden' },
   bgGrid:    { display: 'none' },
   sidebar:   { display: 'flex', flexDirection: 'column', background: '#f1f3f5', borderRight: '1px solid #e1e4e8', transition: 'width 0.25s ease', overflow: 'hidden', position: 'relative', zIndex: 10, flexShrink: 0, minHeight: '100vh' },
-  logoArea:  { display: 'flex', alignItems: 'center', gap: '10px', padding: '18px 12px 16px', borderBottom: '1px solid #e1e4e8', minHeight: 64 },
+  logoArea:  { display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', borderBottom: '1px solid #e1e4e8', minHeight: 64 },
   mrMark:    { width: 32, height: 32, borderRadius: '8px', background: 'linear-gradient(135deg, #0055cc, #00b4ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '-0.5px', flexShrink: 0, boxShadow: '0 0 12px rgba(0,119,255,0.4)' },
   brandText: { flex: 1, minWidth: 0 },
   brandProduct: { fontSize: '13px', fontWeight: 700, color: '#1a202c', letterSpacing: '0.5px' },
   brandSub:  { fontSize: '9px', color: '#8a94a6', letterSpacing: '1px', textTransform: 'uppercase', marginTop: '1px' },
-  hamburger: { background: 'none', border: 'none', color: '#8a94a6', cursor: 'pointer', fontSize: '14px', padding: '4px', marginLeft: 'auto', flexShrink: 0, lineHeight: 1 },
+  hamburger: { background: '#0366d6', border: 'none', borderRadius: '6px', color: '#ffffff', cursor: 'pointer', fontSize: '14px', padding: '6px 10px', flexShrink: 0, lineHeight: 1, fontWeight: 700 },
   nav:       { flex: 1, padding: '12px 8px', overflowY: 'auto', overflowX: 'hidden' },
   navGroup:  { marginBottom: '20px' },
   navGroupLabel: { fontSize: '9px', fontWeight: 700, color: '#8a94a6', letterSpacing: '2px', textTransform: 'uppercase', padding: '0 8px', marginBottom: '6px' },
