@@ -61,8 +61,8 @@ export default function SearchQualityCuration({ auth }) {
   async function searchForQuery(query) {
     setSearching(true);
     try {
-      const res = await fetch(`${SEARCH_API}?q=${encodeURIComponent(query)}&size=10`, {
-        headers: { 'X-Api-Key': 'searchx-dev-key-2026' }
+      const res = await fetch(`${SEARCH_API}?q=${encodeURIComponent(query)}&size=10&mode=keyword`, {
+        headers: { 'X-API-Key': 'searchx-dev-key-2026' }
       });
       if (res.ok) {
         const data = await res.json();
