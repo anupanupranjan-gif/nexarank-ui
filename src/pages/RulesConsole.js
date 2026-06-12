@@ -215,7 +215,7 @@ export default function RulesConsole({ auth, onLogout }) {
       boostField: rule.boostField || '',
       boostValue: rule.boostValue || '',
       boostFactor: rule.boostFactor || '',
-      pinnedIds: (rule.pinnedIds || []).join(', '),
+      pinnedIds: rule.pinnedIds && rule.pinnedIds.length > 0 ? rule.pinnedIds.join(', ') : (rule.pinnedIdsJson ? (() => { try { return JSON.parse(rule.pinnedIdsJson).join(', '); } catch(e) { return ''; } })() : ''),
       synonyms: (rule.synonyms || []).join(', '),
       activateAt: rule.activateAt ? rule.activateAt.slice(0, 16) : '',
       expireAt: rule.expireAt ? rule.expireAt.slice(0, 16) : '',
@@ -417,6 +417,7 @@ export default function RulesConsole({ auth, onLogout }) {
                       <input style={s.input} placeholder="e.g. car battery" value={form.query}
                         onChange={e => setForm({...form, query: e.target.value})} />
                     </div>
+                    {form.type !== 'SYNONYM' && (
                     <div style={{...s.fieldGroup, flex: '100%', minWidth: '100%'}}>
                       <label style={s.fieldLabel}>
                         <input type="checkbox" checked={form.requireQuery}
@@ -428,6 +429,8 @@ export default function RulesConsole({ auth, onLogout }) {
                         </span>
                       </label>
                     </div>
+                    )}
+                    {form.type !== 'SYNONYM' && (
                     <div style={{flex: '100%', minWidth: '100%'}}>
                       <TriggerConditionBuilder
                         query={form.query}
@@ -436,6 +439,7 @@ export default function RulesConsole({ auth, onLogout }) {
                         authHeaders={authHeaders}
                       />
                     </div>
+                    )}
                     {(form.type === 'BOOST' || form.type === 'BURY') && <>
                       <div style={s.fieldGroup}>
                         <label style={s.fieldLabel}>Boost Field</label>
@@ -456,14 +460,14 @@ export default function RulesConsole({ auth, onLogout }) {
                     {form.type === 'PIN' && (
                       <div style={{...s.fieldGroup, flex: 3}}>
                         <label style={s.fieldLabel}>Product IDs (comma-separated)</label>
-                        <input style={s.input} placeholder="SKU-001, SKU-002" value={form.pinnedIds}
+                        <input style={s.input} placeholder="SKU-001, SKU-002" value={form.pinnedIds} style={{...s.input, color: '#1a202c'}}
                           onChange={e => setForm({...form, pinnedIds: e.target.value})} />
                       </div>
                     )}
                     {form.type === 'SYNONYM' && (
                       <div style={{...s.fieldGroup, flex: 3}}>
                         <label style={s.fieldLabel}>Synonyms (comma-separated)</label>
-                        <input style={s.input} placeholder="battery, 12v, car battery" value={form.synonyms}
+                        <input style={{...s.input, color: '#1a202c'}} placeholder="battery, 12v, car battery" value={form.synonyms}
                           onChange={e => setForm({...form, synonyms: e.target.value})} />
                       </div>
                     )}
@@ -591,8 +595,15 @@ function ruleDetails(rule) {
     detail = `${rule.boostField}: ${rule.boostValue} ×${rule.boostFactor}`;
   else if (rule.type === 'PIN')
     detail = `Pins: ${(rule.pinnedIds||[]).join(', ')}`;
-  else if (rule.type === 'SYNONYM')
-    detail = `→ ${(rule.synonyms||[]).join(', ')}`;
+  else if (rule.type === 'SYNONYM') {
+    const syns = rule.synonyms && rule.synonyms.length > 0
+      ? rule.synonyms
+      : rule.synonymsJson
+        ? (() => { try { return JSON.parse(rule.synonymsJson); } catch(e) { return []; } })()
+        : [];
+    const direction = rule.synonymDirection === 'ONE_WAY' ? '→' : '↔';
+    detail = `${direction} ${syns.join(', ')}`;
+  }
   const conditions = rule.triggerConditions || [];
   if (conditions.length > 0) {
     const condStr = conditions
