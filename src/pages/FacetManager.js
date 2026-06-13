@@ -1,5 +1,6 @@
 // Copyright (c) 2026 Anup Ranjan. Licensed under Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
 import React, { useState, useEffect, useRef } from 'react';
+import FacetVisibilityRules from '../components/FacetVisibilityRules';
 
 const API_BASE = '/nexarank/api/v1';
 
@@ -23,6 +24,7 @@ export default function FacetManager({ auth }) {
   const [editingId, setEditingId] = useState(null);
   const [editLabel, setEditLabel] = useState('');
   const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [activeTab, setActiveTab] = useState('facets');
   const dragItem = useRef(null);
 
   useEffect(() => { fetchFacets(); }, []);
@@ -180,19 +182,34 @@ export default function FacetManager({ auth }) {
   const configuredFields = new Set(facets.map(f => f.fieldName));
   const availableToAdd = AVAILABLE_FIELDS.filter(f => !configuredFields.has(f.fieldName));
 
+
   const s = styles;
 
   return (
     <div>
+      {/* Tab bar */}
+      <div style={{display:'flex', gap:4, paddingBottom:16, borderBottom:'1px solid #e1e4e8', marginBottom:20}}>
+        <button
+          style={{background: activeTab==='facets' ? '#f0f6fc' : 'none', border: activeTab==='facets' ? '1px solid #0366d6' : '1px solid #e1e4e8', borderRadius:6, padding:'8px 16px', fontSize:13, cursor:'pointer', color: activeTab==='facets' ? '#0366d6' : '#4a5568', fontWeight: activeTab==='facets' ? 700 : 400, fontFamily:'inherit'}}
+          onClick={() => setActiveTab('facets')}>⊞ Facet Configuration</button>
+        <button
+          style={{background: activeTab==='visibility' ? '#f0f6fc' : 'none', border: activeTab==='visibility' ? '1px solid #0366d6' : '1px solid #e1e4e8', borderRadius:6, padding:'8px 16px', fontSize:13, cursor:'pointer', color: activeTab==='visibility' ? '#0366d6' : '#4a5568', fontWeight: activeTab==='visibility' ? 700 : 400, fontFamily:'inherit'}}
+          onClick={() => setActiveTab('visibility')}>👁 Visibility Rules</button>
+      </div>
+
+      {activeTab === 'visibility' ? (
+        <FacetVisibilityRules auth={auth} allFacets={facets} />
+      ) : (
+      <div>
       <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16}}>
         <div style={{fontSize:20, fontWeight:700, color:'#1a202c'}}>Facet Manager</div>
-        <button style={styles.fetchBtn} onClick={fetchEngineFields} disabled={fetchingFields}>
+        <button style={s.fetchBtn} onClick={fetchEngineFields} disabled={fetchingFields}>
           {fetchingFields ? 'Fetching...' : '⬇ Fetch Fields from Engine'}
         </button>
       </div>
 
       {showFieldPicker && engineFields.length > 0 && (
-        <div style={styles.fieldPicker}>
+        <div style={s.fieldPicker}>
           <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
             <span style={{fontSize:13, fontWeight:600, color:'#4a5568'}}>
               Facetable Fields from Search Engine
@@ -200,18 +217,18 @@ export default function FacetManager({ auth }) {
             <button style={{background:'none',border:'none',color:'#64748b',cursor:'pointer',fontSize:16}}
               onClick={() => setShowFieldPicker(false)}>✕</button>
           </div>
-          <div style={styles.fieldList}>
+          <div style={s.fieldList}>
             {engineFields.map(f => {
               const alreadyAdded = facets.some(fc => fc.fieldName === f.name);
               return (
-                <div key={f.name} style={{...styles.fieldItem, opacity: alreadyAdded ? 0.4 : 1}}>
+                <div key={f.name} style={{...s.fieldItem, opacity: alreadyAdded ? 0.4 : 1}}>
                   <div>
                     <span style={{fontSize:13, color:'#1a202c', fontWeight:500, marginRight:8}}>{f.name}</span>
                     <span style={{fontSize:11, color:'#64748b', background:'#f8f9fa', padding:'1px 6px', borderRadius:4}}>{f.type}</span>
                   </div>
                   {alreadyAdded
                     ? <span style={{fontSize:11, color:'#64748b'}}>✓ Added</span>
-                    : <button style={styles.importBtn} onClick={() => importFieldAsFacet(f)}>+ Add</button>
+                    : <button style={s.importBtn} onClick={() => importFieldAsFacet(f)}>+ Add</button>
                   }
                 </div>
               );
@@ -343,16 +360,18 @@ export default function FacetManager({ auth }) {
           )}
         </div>
       </div>
-    </div>
+      </div>
+      </div>
+      )}
     </div>
   );
 }
 
 function typeColor(type) {
   const map = {
-    TERMS: { background: '#dbeafe', color: '#1e40af' },
-    RANGE: { background: '#fef9c3', color: '#854d0e' },
-    BOOLEAN: { background: '#ede9fe', color: '#5b21b6' }
+    TERMS:   { background: '#dbeafe', color: '#1d4ed8' },
+    RANGE:   { background: '#fef3c7', color: '#92400e' },
+    BOOLEAN: { background: '#d1fae5', color: '#065f46' },
   };
   return map[type] || { background: '#f3f4f6', color: '#374151' };
 }
@@ -360,33 +379,25 @@ function typeColor(type) {
 const styles = {
   fetchBtn:   { background: '#e8f0fe', border: '1px solid rgba(0,119,255,0.3)', color: '#4a5568', padding: '7px 16px', borderRadius: 7, cursor: 'pointer', fontSize: 13, fontWeight: 600 },
   fieldPicker:{ background: '#ffffff', border: '1px solid rgba(0,119,255,0.25)', borderRadius: 10, padding: 16, marginBottom: 20 },
-  fieldList:  { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 },
-  fieldItem:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: 7, padding: '8px 12px' },
-  importBtn:  { fontSize: 11, background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', color: '#86efac', padding: '3px 8px', borderRadius: 5, cursor: 'pointer' },
-  card:        { background: '#fff', borderRadius: 8, border: '1px solid #e5e7eb', padding: 24, marginBottom: 24 },
-  panelTitle:  { margin: '0 0 4px', fontSize: 16, fontWeight: 600, color: '#111827' },
-  hint:        { margin: '0 0 12px', fontSize: 12, color: '#6b7280' },
-  availableField: {
-    border: '1px solid #e5e7eb', borderRadius: 6, padding: '10px 12px',
-    marginBottom: 8, cursor: 'pointer', position: 'relative',
-    transition: 'all 0.15s',
-    ':hover': { background: '#f9fafb' }
-  },
-  facetRow:    {
-    border: '2px solid #e5e7eb', borderRadius: 8, padding: '12px 16px',
-    marginBottom: 8, display: 'flex', alignItems: 'flex-start', gap: 12,
-    cursor: 'grab', transition: 'all 0.15s',
-  },
-  dragHandle:  { fontSize: 18, color: '#d1d5db', cursor: 'grab', paddingTop: 2, userSelect: 'none' },
-  input:       { border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 10px', fontSize: 13 },
-  btnSm:       { background: '#f3f4f6', color: '#374151', border: '1px solid #e5e7eb', borderRadius: 5, padding: '4px 10px', fontSize: 12, cursor: 'pointer' },
-  btnDanger:   { background: '#fee2e2', color: '#991b1b', borderColor: '#fecaca' },
-  editBtn:     { background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, padding: '0 4px' },
-  badge:       { display: 'inline-block', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 600 },
-  metaBadge:   { background: '#e5e7eb', color: '#374151', borderRadius: 4, padding: '2px 8px', fontSize: 11 },
-  checkLabel:  { fontSize: 12, color: '#374151', display: 'flex', alignItems: 'center', cursor: 'pointer' },
-  muted:       { color: '#4b5563', fontSize: 14 },
-  emptyState:  { textAlign: 'center', padding: '40px 20px' },
-  error:       { background: '#fee2e2', color: '#991b1b', padding: '8px 12px', borderRadius: 6, marginBottom: 12, fontSize: 14 },
-  successMsg:  { background: '#d1fae5', color: '#065f46', padding: '8px 12px', borderRadius: 6, marginBottom: 12, fontSize: 14 },
+  fieldList:  { display: 'flex', flexWrap: 'wrap', gap: 8 },
+  fieldItem:  { background: '#f8f9fa', border: '1px solid #e1e4e8', borderRadius: 8, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, minWidth: 200 },
+  importBtn:  { fontSize: 11, background: '#f0fdf4', border: '1px solid #86efac', color: '#00a854', padding: '3px 8px', borderRadius: 5, cursor: 'pointer' },
+
+  card:          { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 24, marginBottom: 20 },
+  panelTitle:    { fontSize: 15, fontWeight: 600, color: '#111827', margin: '0 0 4px' },
+  hint:          { fontSize: 12, color: '#6b7280', margin: '0 0 12px' },
+  muted:         { color: '#6b7280', fontSize: 13 },
+  availableField:{ padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 8, cursor: 'pointer', marginBottom: 6, background: '#fafafa' },
+  badge:         { display: 'inline-block', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10 },
+  metaBadge:     { display: 'inline-block', fontSize: 11, color: '#6b7280', background: '#f3f4f6', padding: '2px 8px', borderRadius: 10 },
+  facetRow:      { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 8, cursor: 'grab', transition: 'all 0.15s' },
+  dragHandle:    { color: '#9ca3af', fontSize: 16, cursor: 'grab' },
+  input:         { background: '#fff', border: '1px solid #e1e4e8', borderRadius: 6, padding: '6px 10px', fontSize: 13, color: '#1a202c', outline: 'none' },
+  btnSm:         { background: '#f3f4f6', border: '1px solid #e5e7eb', color: '#374151', borderRadius: 5, padding: '4px 10px', fontSize: 12, cursor: 'pointer' },
+  btnDanger:     { background: '#fff5f5', border: '1px solid #fca5a5', color: '#c0392b' },
+  editBtn:       { background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, padding: '0 4px' },
+  checkLabel:    { display: 'flex', alignItems: 'center', fontSize: 12, color: '#6b7280', cursor: 'pointer' },
+  error:         { background: '#fff5f5', border: '1px solid #fca5a5', color: '#c0392b', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: 13 },
+  successMsg:    { background: '#f0fdf4', border: '1px solid #86efac', color: '#00a854', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: 13 },
+  emptyState:    { textAlign: 'center', padding: '40px 20px' },
 };
