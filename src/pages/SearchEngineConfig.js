@@ -16,6 +16,7 @@ const emptyConfig = {
   password: '',
   sslEnabled: true,
   sslVerify: false,
+  previewUrl: '',
 };
 
 export default function SearchEngineConfig({ auth }) {
@@ -311,7 +312,21 @@ export default function SearchEngineConfig({ auth }) {
 
           {/* Actions */}
           <div style={s.actions}>
-            <button
+            {/* Preview URL */}
+              <div style={{...s.formGroup, flex: '100%', marginBottom: 16}}>
+                <label style={s.label}>Preview URL</label>
+                <input
+                  style={s.input}
+                  type="url"
+                  placeholder="https://staging.yoursite.com/search"
+                  value={config.previewUrl || ''}
+                  onChange={e => handleChange('previewUrl', e.target.value)}
+                />
+                <div style={{fontSize:11, color:'#4a5568', marginTop:4}}>
+                  Merchandisers and approvers will use this URL to preview rule results. Leave blank to disable previewing.
+                </div>
+              </div>
+              <button
               style={{...s.btn, ...s.btnPrimary, opacity: saving ? 0.6 : 1}}
               onClick={saveConfig}
               disabled={saving}

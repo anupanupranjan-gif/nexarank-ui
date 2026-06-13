@@ -117,7 +117,8 @@ export default function RulesConsole({ auth, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [projects, setProjects]       = useState([]);
   const [activeProject, setActiveProject] = useState(auth.projectId || 'main');
-  const [historyRule, setHistoryRule] = useState(null); // rule whose history drawer is open
+  const [historyRule, setHistoryRule] = useState(null);
+  const [previewUrl, setPreviewUrl]   = useState(null); // rule whose history drawer is open
 
   const canCreate  = ['MERCHANDISER','APPROVER','ADMIN'].includes(auth.role);
   const canApprove = ['APPROVER','ADMIN'].includes(auth.role);
@@ -133,6 +134,15 @@ export default function RulesConsole({ auth, onLogout }) {
   }
 
   useEffect(() => { fetchProjects(); }, []);
+  useEffect(() => { if (auth?.token) fetchPreviewUrl(); }, [auth?.token]);
+
+  async function fetchPreviewUrl() {
+    try {
+      const res = await fetch(`${API_BASE}/engine-config`, { headers: authHeaders() });
+      const cfg = await res.json();
+      if (res.ok && cfg.previewUrl) setPreviewUrl(cfg.previewUrl);
+    } catch (e) { /* preview is optional */ }
+  }
 
   async function fetchProjects() {
     try {
@@ -201,6 +211,15 @@ export default function RulesConsole({ auth, onLogout }) {
     await fetch(`${API_BASE}/rules/${id}/toggle`, { method: 'PATCH', headers: authHeaders() });
     fetchRules();
   }
+  function previewRule(rule) {
+    if (!previewUrl) {
+      alert('Configure a Preview URL in Engine Config first.');
+      return;
+    }
+    const url = `${previewUrl}${previewUrl.includes('?') ? '&' : '?'}q=${encodeURIComponent(rule.query)}`;
+    window.open(url, '_blank');
+  }
+
   async function deleteRule(id) {
     if (!window.confirm('Delete this rule?')) return;
     await fetch(`${API_BASE}/rules/${id}`, { method: 'DELETE', headers: authHeaders() });
@@ -567,6 +586,13 @@ export default function RulesConsole({ auth, onLogout }) {
                                   title="Version history">
                                   ⏱
                                 </button>
+                                {/* Preview button */}
+                                <button
+                                  style={{...s.actionBtn, ...s.actionPreview}}
+                                  onClick={() => previewRule(rule)}
+                                  title={previewUrl ? `Preview: ${previewUrl}` : 'Configure Preview URL in Engine Config'}>
+                                  👁
+                                </button>
                                 {canDelete && (
                                   <button style={{...s.actionBtn, ...s.actionDelete}} onClick={() => deleteRule(rule.id)}>⌫</button>
                                 )}
@@ -717,6 +743,7 @@ const s = {
   actionReject:  { background: 'rgba(255,68,68,0.1)',  border: '1px solid rgba(255,68,68,0.25)', color: '#ff6b6b' },
   actionDelete:  { background: 'rgba(255,68,68,0.08)', border: '1px solid rgba(255,68,68,0.2)',  color: '#ff6b6b' },
   actionHistory: { background: 'rgba(0,180,255,0.08)', border: '1px solid rgba(0,180,255,0.2)', color: '#00b4ff' },
+  actionPreview: { background: '#f0fdf4', border: '1px solid #86efac', color: '#00a854' },
   actionEdit:    { background: 'rgba(180,0,255,0.08)', border: '1px solid rgba(180,0,255,0.2)', color: '#d066ff' },
   loadingRow:{ display: 'flex', alignItems: 'center', gap: '12px', padding: '32px', color: '#4a5568', fontSize: '13px' },
   loadingSpinner: { width: '16px', height: '16px', border: '2px solid rgba(0,119,255,0.2)', borderTopColor: '#0077ff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
