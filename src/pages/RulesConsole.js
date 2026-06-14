@@ -13,6 +13,7 @@ import SearchEngineConfig from './SearchEngineConfig';
 import AbTestingTab from '../components/AbTestingTab';
 import TriggerConditionBuilder from '../components/TriggerConditionBuilder';
 import VersionHistoryTab from '../components/VersionHistoryTab';
+import PipelineEditor from './PipelineEditor';
 
 const API_BASE = '/nexarank/api/v1';
 const RULE_TYPES = ['BOOST', 'PIN', 'BURY', 'SYNONYM'];
@@ -32,6 +33,7 @@ const NAV_GROUPS = [
   ]},
   { label: 'CONFIGURATION', items: [
       { key: 'facets',        label: 'Facet Manager',   icon: '▤', permission: 'FACET_VIEW' },
+      { key: 'pipeline', label: 'Pipeline Editor', icon: '⟳', permission: 'ENGINE_CONFIG_VIEW' },
       { key: 'engine-config', label: 'Engine Config',   icon: '⛁', permission: 'ENGINE_CONFIG_VIEW' },
   ]},
   { label: 'INTELLIGENCE', items: [
@@ -46,6 +48,7 @@ const NAV_GROUPS = [
       { key: 'groups', label: 'User Groups',      icon: '◉', permission: 'USER_MANAGEMENT' },
       { key: 'audit',  label: 'Audit Log',        icon: '📋', permission: 'AUDIT_LOG_VIEW' },
   ]},
+  
 ];
 
 // ── VERSION HISTORY DRAWER ────────────────────────────────────────────────────
@@ -413,6 +416,8 @@ export default function RulesConsole({ auth, onLogout }) {
             <AbTestingTab auth={auth} />
           ) : activeTab === 'audit' ? (
             <AuditLog auth={auth} />
+          ) : activeTab === 'pipeline' ? (
+            <PipelineEditor auth={auth} />
           ) : (
             <>
               {canCreate && (
