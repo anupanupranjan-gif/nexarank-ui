@@ -12,12 +12,16 @@ export default function AiSuggestions({ auth }) {
   const [config, setConfig]       = useState(null);
   const [showConfig, setShowConfig] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false); 
+  const [watchedQueries, setWatchedQueries] = useState([]);
+  const [alerts, setAlerts]                 = useState([]);
+  const [newWatchedQuery, setNewWatchedQuery] = useState({query:'', expectedMinCtr:'', expectedMaxPosition:'', notes:''});
+  const [addingWatched, setAddingWatched]   = useState(false);
 
   function authHeaders() {
     return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth.token}` };
   }
 
-  useEffect(() => { fetchSuggestions(); fetchConfig(); }, []);
+  useEffect(() => { fetchSuggestions(); fetchConfig(); fetchWatchedQueries(); }, []);
 
   async function fetchSuggestions() {
     setLoading(true);
@@ -52,7 +56,43 @@ async function saveConfig() {
     }
   } catch (e) {} finally { setSavingConfig(false); }
 }
+async function fetchWatchedQueries() {
+  try {
+    const [wqRes, alertRes] = await Promise.all([
+      fetch(`${API_BASE}/suggestions/watched-queries`, { headers: authHeaders() }),
+      fetch(`${API_BASE}/suggestions/alerts`, { headers: authHeaders() })
+    ]);
+    if (wqRes.ok) setWatchedQueries(await wqRes.json());
+    if (alertRes.ok) setAlerts(await alertRes.json());
+  } catch (e) {}
+}
 
+async function addWatchedQuery() {
+  if (!newWatchedQuery.query.trim()) return;
+  setAddingWatched(true);
+  try {
+    const res = await fetch(`${API_BASE}/suggestions/watched-queries`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        ...newWatchedQuery,
+        expectedMinCtr: newWatchedQuery.expectedMinCtr ? parseFloat(newWatchedQuery.expectedMinCtr) : null,
+        expectedMaxPosition: newWatchedQuery.expectedMaxPosition ? parseFloat(newWatchedQuery.expectedMaxPosition) : null,
+      }),
+    });
+    if (res.ok) {
+      setNewWatchedQuery({query:'', expectedMinCtr:'', expectedMaxPosition:'', notes:''});
+      fetchWatchedQueries();
+    }
+  } catch (e) {} finally { setAddingWatched(false); }
+}
+
+async function deleteWatchedQuery(id) {
+  await fetch(`${API_BASE}/suggestions/watched-queries/${id}`, {
+    method: 'DELETE', headers: authHeaders()
+  });
+  fetchWatchedQueries();
+}
   async function applySuggestion(suggestion, key) {
     setApplying(prev => ({ ...prev, [key]: true }));
     try {
@@ -227,6 +267,69 @@ async function saveConfig() {
               </div>
             )}
           </div>
+          {/* Watched Queries */}
+          <div style={s.section}>
+            <div style={s.sectionHeader}>
+              <div style={s.sectionTitle}>
+                <span style={s.sectionIcon}>👁</span>
+                Watched Queries
+              </div>
+              <div style={s.sectionDesc}>Monitor high-priority queries and get alerted when performance drops</div>
+            </div>
+
+            {/* Add form */}
+            <div style={{display:'flex', gap:8, marginBottom:16, flexWrap:'wrap'}}>
+              <input style={{...s.input, flex:2, minWidth:140}} placeholder="Query to watch..."
+                value={newWatchedQuery.query}
+                onChange={e => setNewWatchedQuery(p => ({...p, query: e.target.value}))} />
+              <input style={{...s.input, width:90}} placeholder="Min CTR" type="number" step="0.01"
+                value={newWatchedQuery.expectedMinCtr}
+                onChange={e => setNewWatchedQuery(p => ({...p, expectedMinCtr: e.target.value}))} />
+              <input style={{...s.input, width:100}} placeholder="Max Position" type="number"
+                value={newWatchedQuery.expectedMaxPosition}
+                onChange={e => setNewWatchedQuery(p => ({...p, expectedMaxPosition: e.target.value}))} />
+              <input style={{...s.input, flex:2, minWidth:140}} placeholder="Notes (optional)"
+                value={newWatchedQuery.notes}
+                onChange={e => setNewWatchedQuery(p => ({...p, notes: e.target.value}))} />
+              <button style={{...s.applyBtn, padding:'8px 16px'}}
+                onClick={addWatchedQuery} disabled={addingWatched || !newWatchedQuery.query.trim()}>
+                {addingWatched ? 'Adding...' : '+ Watch'}
+              </button>
+            </div>
+
+            {/* Alert list */}
+            {alerts.length === 0 && watchedQueries.length === 0 && (
+              <div style={s.empty}>No watched queries. Add queries above to monitor their performance.</div>
+            )}
+            {alerts.map((alert, i) => (
+              <div key={i} style={{
+                ...s.card,
+                marginBottom: 8,
+                borderLeft: `4px solid ${alert.status === 'BREACH' ? '#ef4444' : alert.status === 'NO_DATA' ? '#f97316' : '#22c55e'}`,
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+              }}>
+                <div>
+                  <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:4}}>
+                    <span style={{...s.cardQuery, marginBottom:0}}>{alert.query}</span>
+                    <span style={{
+                      fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:10,
+                      background: alert.status === 'BREACH' ? '#fef2f2' : alert.status === 'NO_DATA' ? '#fff7ed' : '#f0fdf4',
+                      color: alert.status === 'BREACH' ? '#dc2626' : alert.status === 'NO_DATA' ? '#f97316' : '#16a34a'
+                    }}>{alert.status}</span>
+                  </div>
+                  <div style={s.cardReason}>{alert.message}</div>
+                  {alert.ctr !== undefined && (
+                    <div style={{fontSize:12, color:'#64748b'}}>
+                      CTR: {(alert.ctr * 100).toFixed(1)}% · Clicks: {alert.clicks} · Impressions: {alert.impressions}
+                    </div>
+                  )}
+                  {alert.notes && <div style={{fontSize:11, color:'#94a3b8', marginTop:4}}>{alert.notes}</div>}
+                </div>
+                <button style={{...s.applyBtn, background:'#fef2f2', borderColor:'#fca5a5', color:'#dc2626'}}
+                  onClick={() => deleteWatchedQuery(alert.watchedQueryId)}>Remove</button>
+              </div>
+            ))}
+          </div>
         </>
       )}
     </div>
@@ -263,4 +366,5 @@ const s = {
   cardActions:  { display: 'flex', justifyContent: 'flex-end' },
   applyBtn:     { background: '#e8f0fe', border: '1px solid rgba(0,119,255,0.3)', color: '#4a5568', padding: '6px 14px', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600 },
   appliedBadge: { fontSize: 12, color: '#22c55e', fontWeight: 600 },
+  input: { padding:'8px 10px', border:'1px solid #e1e4e8', borderRadius:6, fontSize:13, background:'white', outline:'none' },
 };
