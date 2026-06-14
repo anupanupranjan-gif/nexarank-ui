@@ -9,12 +9,15 @@ export default function AiSuggestions({ auth }) {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState({});
   const [applied, setApplied] = useState({});
+  const [config, setConfig]       = useState(null);
+  const [showConfig, setShowConfig] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false); 
 
   function authHeaders() {
     return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth.token}` };
   }
 
-  useEffect(() => { fetchSuggestions(); }, []);
+  useEffect(() => { fetchSuggestions(); fetchConfig(); }, []);
 
   async function fetchSuggestions() {
     setLoading(true);
@@ -28,6 +31,27 @@ export default function AiSuggestions({ auth }) {
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }
+  async function fetchConfig() {
+  try {
+    const res = await fetch(`${API_BASE}/suggestions/config`, { headers: authHeaders() });
+    if (res.ok) setConfig(await res.json());
+  } catch (e) {}
+}
+
+async function saveConfig() {
+  setSavingConfig(true);
+  try {
+    const res = await fetch(`${API_BASE}/suggestions/config`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(config),
+    });
+    if (res.ok) {
+      setConfig(await res.json());
+      setShowConfig(false);
+    }
+  } catch (e) {} finally { setSavingConfig(false); }
+}
 
   async function applySuggestion(suggestion, key) {
     setApplying(prev => ({ ...prev, [key]: true }));
@@ -53,7 +77,47 @@ export default function AiSuggestions({ auth }) {
         </div>
         <button style={s.refreshBtn} onClick={fetchSuggestions}>↻ Refresh</button>
       </div>
+    {/* Config Panel */}
+<div style={{display:'flex', justifyContent:'flex-end', marginBottom: 16}}>
+  <button style={s.refreshBtn} onClick={() => setShowConfig(!showConfig)}>
+    ⚙ Thresholds
+  </button>
+</div>
 
+{showConfig && config && (
+  <div style={{...s.section, marginBottom: 20}}>
+    <div style={s.sectionTitle}>Suggestion Thresholds</div>
+    <div style={{display:'flex', gap:16, flexWrap:'wrap', marginTop:16}}>
+      {[
+        {key:'maxClickPosition', label:'Max Click Position', hint:'Positions above this are boost candidates'},
+        {key:'minClicks', label:'Min Clicks', hint:'Minimum clicks before suggesting'},
+        {key:'minImpressions', label:'Min Impressions', hint:'Minimum impressions to reduce noise'},
+        {key:'minCtr', label:'Min CTR', hint:'CTR below this triggers boost suggestion'},
+        {key:'lookbackDays', label:'Lookback Days', hint:'Days of history to analyze'},
+        {key:'maxSuggestions', label:'Max Suggestions', hint:'Maximum suggestions to return'},
+      ].map(field => (
+        <div key={field.key} style={{display:'flex', flexDirection:'column', gap:4, minWidth:160}}>
+          <label style={{fontSize:11, fontWeight:700, color:'#0f172a', textTransform:'uppercase'}}>{field.label}</label>
+          <input
+            style={{padding:'8px 10px', border:'1px solid #cbd5e1', borderRadius:6, fontSize:13, background:'white'}}
+            type="number"
+            step={field.key === 'minCtr' ? '0.01' : '1'}
+            value={config[field.key] || ''}
+            onChange={e => setConfig(p => ({...p, [field.key]: parseFloat(e.target.value)}))}
+          />
+          <div style={{fontSize:11, color:'#64748b'}}>{field.hint}</div>
+        </div>
+      ))}
+    </div>
+    <div style={{marginTop:16, display:'flex', gap:8}}>
+      <button style={{...s.refreshBtn, background:'#4f46e5', color:'white', border:'none'}}
+        onClick={saveConfig} disabled={savingConfig}>
+        {savingConfig ? 'Saving...' : '💾 Save Thresholds'}
+      </button>
+      <button style={s.refreshBtn} onClick={() => setShowConfig(false)}>Cancel</button>
+    </div>
+  </div>
+)}
       {loading ? (
         <div style={s.loading}>Analyzing click patterns...</div>
       ) : (
