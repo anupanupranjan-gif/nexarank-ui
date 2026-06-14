@@ -454,15 +454,30 @@ export default function RulesConsole({ auth, onLogout }) {
                       </label>
                     </div>
                     )}
-                    {form.type !== 'SYNONYM' && (
-                    <div style={{flex: '100%', minWidth: '100%'}}>
-                      <TriggerConditionBuilder
-                        query={form.query}
-                        conditions={form.triggerConditions}
-                        onChange={conditions => setForm({...form, triggerConditions: conditions})}
-                        authHeaders={authHeaders}
-                      />
-                    </div>
+                    {form.type === 'SYNONYM' && (
+                      <div style={s.formGroup}>
+                        <label style={s.label}>Direction</label>
+                        <div style={{display:'flex', gap:8}}>
+                          {['TWO_WAY','ONE_WAY'].map(d => (
+                            <button
+                              key={d}
+                              style={{
+                                ...s.btn,
+                                background: (form.synonymDirection||'TWO_WAY') === d ? '#4f46e5' : '#f1f5f9',
+                                color: (form.synonymDirection||'TWO_WAY') === d ? 'white' : '#475569',
+                                border: '1px solid #cbd5e1',
+                                fontSize: 12,
+                              }}
+                              onClick={() => setForm(p => ({...p, synonymDirection: d}))}
+                            >
+                              {d === 'TWO_WAY' ? '↔ Two-way' : '→ One-way'}
+                            </button>
+                          ))}
+                        </div>
+                        <div style={{fontSize:11, color:'#64748b', marginTop:4}}>
+                          Two-way: battery ↔ 12v battery. One-way: car battery → battery only.
+                        </div>
+                      </div>
                     )}
                     {(form.type === 'BOOST' || form.type === 'BURY') && <>
                       <div style={s.fieldGroup}>
