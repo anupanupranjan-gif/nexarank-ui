@@ -26,7 +26,7 @@ export default function TriggerConditionBuilder({ query, conditions, onChange, a
         if (!res.ok) return;
         const all = await res.json();
         // Only TERMS facets have discrete values worth selecting
-        setFacets(all.filter(f => f.facetType === 'TERMS'));
+        setFacets(all);
       } catch (e) { console.error('Failed to load facets', e); }
     }
     loadFacets();
@@ -59,7 +59,8 @@ export default function TriggerConditionBuilder({ query, conditions, onChange, a
       i === idx ? { ...c, facetField: field, facetValues: [] } : c
     );
     onChange(updated);
-    if (field) loadValues(field);
+    const facet = facets.find(f => f.fieldName === field);
+    if (field && (!facet || facet.facetType === 'TERMS')) loadValues(field);
   }
 
   function toggleValue(idx, value) {
@@ -105,41 +106,98 @@ export default function TriggerConditionBuilder({ query, conditions, onChange, a
           </div>
 
           {/* Value multi-select */}
-          {cond.facetField && (
-            <div style={tc.valuesCol}>
-              {loadingValues[cond.facetField] ? (
-                <span style={tc.loading}>Loading values…</span>
-              ) : (
-                <div style={tc.valueGrid}>
-                  {(valueOptions[cond.facetField] || []).map(opt => {
-                    const selected = cond.facetValues.includes(opt.value);
-                    return (
-                      <button key={opt.value}
-                        style={{ ...tc.valueChip, ...(selected ? tc.valueChipSelected : {}) }}
-                        onClick={() => toggleValue(idx, opt.value)}>
-                        {opt.value}
-                        <span style={tc.valueCount}>{opt.count.toLocaleString()}</span>
-                      </button>
-                    );
-                  })}
-                  {(valueOptions[cond.facetField] || []).length === 0 && (
-                    <span style={tc.loading}>No values found</span>
-                  )}
+          {cond.facetField && (() => {
+            const facet = facets.find(f => f.fieldName === cond.facetField);
+            const facetType = facet?.facetType || 'TERMS';
+
+            if (facetType === 'BOOLEAN') {
+              return (
+                <div style={tc.valuesCol}>
+                  <div style={tc.valueGrid}>
+                    {['true', 'false'].map(v => {
+                      const selected = cond.facetValues.includes(v);
+                      return (
+                        <button key={v}
+                          style={{ ...tc.valueChip, ...(selected ? tc.valueChipSelected : {}) }}
+                          onClick={() => toggleValue(idx, v)}>
+                          {v === 'true' ? '✓ Yes' : '✗ No'}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
-              {cond.facetValues.length > 0 && (
-                <div style={tc.selectedSummary}>
-                  Selected: {cond.facetValues.map(v => (
-                    <span key={v} style={tc.selectedTag}>
-                      {v}
-                      <button style={tc.removeTag}
-                        onClick={() => toggleValue(idx, v)}>×</button>
-                    </span>
-                  ))}
+              );
+            }
+
+            if (facetType === 'RANGE') {
+              const minVal = cond.facetValues.find(v => v.startsWith('min:'))?.substring(4) || '';
+              const maxVal = cond.facetValues.find(v => v.startsWith('max:'))?.substring(4) || '';
+              return (
+                <div style={tc.valuesCol}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input style={{ ...tc.select, width: 80 }} type="number" placeholder="Min"
+                      value={minVal}
+                      onChange={e => {
+                        const others = cond.facetValues.filter(v => !v.startsWith('min:'));
+                        const updated = conditions.map((c, i) =>
+                          i === idx ? { ...c, facetValues: e.target.value
+                            ? [...others, `min:${e.target.value}`]
+                            : others } : c);
+                        onChange(updated);
+                      }} />
+                    <span style={{ color: '#64748b', fontSize: 12 }}>to</span>
+                    <input style={{ ...tc.select, width: 80 }} type="number" placeholder="Max"
+                      value={maxVal}
+                      onChange={e => {
+                        const others = cond.facetValues.filter(v => !v.startsWith('max:'));
+                        const updated = conditions.map((c, i) =>
+                          i === idx ? { ...c, facetValues: e.target.value
+                            ? [...others, `max:${e.target.value}`]
+                            : others } : c);
+                        onChange(updated);
+                      }} />
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
+              );
+            }
+
+            // TERMS — existing chip UI
+            return (
+              <div style={tc.valuesCol}>
+                {loadingValues[cond.facetField] ? (
+                  <span style={tc.loading}>Loading values…</span>
+                ) : (
+                  <div style={tc.valueGrid}>
+                    {(valueOptions[cond.facetField] || []).map(opt => {
+                      const selected = cond.facetValues.includes(opt.value);
+                      return (
+                        <button key={opt.value}
+                          style={{ ...tc.valueChip, ...(selected ? tc.valueChipSelected : {}) }}
+                          onClick={() => toggleValue(idx, opt.value)}>
+                          {opt.value}
+                          <span style={tc.valueCount}>{opt.count.toLocaleString()}</span>
+                        </button>
+                      );
+                    })}
+                    {(valueOptions[cond.facetField] || []).length === 0 && (
+                      <span style={tc.loading}>No values found</span>
+                    )}
+                  </div>
+                )}
+                {cond.facetValues.length > 0 && (
+                  <div style={tc.selectedSummary}>
+                    Selected: {cond.facetValues.map(v => (
+                      <span key={v} style={tc.selectedTag}>
+                        {v}
+                        <button style={tc.removeTag}
+                          onClick={() => toggleValue(idx, v)}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           <button style={tc.removeBtn} onClick={() => removeCondition(idx)}
             title="Remove condition">×</button>

@@ -502,7 +502,7 @@ export default function RulesConsole({ auth, onLogout }) {
                         <select style={s.input} value={form.boostField}
                           onChange={e => { setForm({...form, boostField: e.target.value, boostValue: ''}); fetchFieldValues(e.target.value); }}>
                           <option value="">Select field...</option>
-                          {indexFields.filter(f => f.facetable).map(f => (
+                          {indexFields.filter(f => f.type === 'keyword').map(f => (
                             <option key={f.name} value={f.name}>{f.name} ({f.type})</option>
                           ))}
                         </select>
@@ -551,6 +551,12 @@ export default function RulesConsole({ auth, onLogout }) {
                         onChange={e => setForm({...form, expireAt: e.target.value})} />
                     </div>
                   </div>
+                  <TriggerConditionBuilder
+                    query={form.query}
+                    conditions={form.triggerConditions}
+                    onChange={conditions => setForm({...form, triggerConditions: conditions})}
+                    authHeaders={authHeaders}
+                  />
                   <div style={{display:'flex', gap:8}}>
                     <button style={{...s.btn, opacity: saving ? 0.6 : 1}}
                       onClick={editingId ? saveEdit : createRule} disabled={saving}>
