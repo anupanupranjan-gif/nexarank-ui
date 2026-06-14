@@ -62,7 +62,7 @@ export default function SearchQualityCuration({ auth }) {
     setSearching(true);
     try {
       const res = await fetch(`${SEARCH_API}?q=${encodeURIComponent(query)}&size=10&mode=keyword`, {
-        headers: { 'X-API-Key': 'searchx-dev-key-2026' }
+        headers: { 'X-API-Key': process.env.REACT_APP_SEARCH_API_KEY || 'searchx-dev-key-2026' }
       });
       if (res.ok) {
         const data = await res.json();
