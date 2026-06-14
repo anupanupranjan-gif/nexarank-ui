@@ -126,6 +126,8 @@ export default function RulesConsole({ auth, onLogout }) {
   const canCreate  = ['MERCHANDISER','APPROVER','ADMIN'].includes(auth.role);
   const canApprove = ['APPROVER','ADMIN'].includes(auth.role);
   const canDelete  = ['APPROVER','ADMIN'].includes(auth.role);
+  const [indexFields, setIndexFields] = useState([]);
+  const [fieldValues, setFieldValues] = useState([]);
 
   useEffect(() => {
     const nonRuleTabs = ['users','facets','engine-config','click-intelligence','search-quality'];
@@ -136,7 +138,7 @@ export default function RulesConsole({ auth, onLogout }) {
     return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth.token}` };
   }
 
-  useEffect(() => { fetchProjects(); }, []);
+  useEffect(() => { fetchProjects(); fetchIndexFields(); }, []);
   useEffect(() => { if (auth?.token) fetchPreviewUrl(); }, [auth?.token]);
 
   async function fetchPreviewUrl() {
@@ -159,17 +161,31 @@ export default function RulesConsole({ auth, onLogout }) {
     auth.projectId = projectId;
     fetchRules();
   }
-
-  async function fetchRules() {
+  async function fetchIndexFields() {
     try {
-      setLoading(true);
-      const url = activeTab === 'pending' ? `${API_BASE}/rules/pending` : `${API_BASE}/rules`;
-      const res = await fetch(url, { headers: authHeaders() });
-      if (res.status === 403) { onLogout(); return; }
-      setRules(await res.json());
-    } catch (e) { setError('Failed to load rules'); }
-    finally { setLoading(false); }
+      const res = await fetch(`${API_BASE}/engine-config/fields`, { headers: authHeaders() });
+      if (res.ok) setIndexFields(await res.json());
+    } catch (e) {}
   }
+
+  async function fetchFieldValues(fieldName) {
+    if (!fieldName) { setFieldValues([]); return; }
+    try {
+      const res = await fetch(`${API_BASE}/engine-config/fields/${fieldName}/values`, { headers: authHeaders() });
+      if (res.ok) setFieldValues(await res.json());
+      else setFieldValues([]);
+    } catch (e) { setFieldValues([]); }
+  }
+    async function fetchRules() {
+      try {
+        setLoading(true);
+        const url = activeTab === 'pending' ? `${API_BASE}/rules/pending` : `${API_BASE}/rules`;
+        const res = await fetch(url, { headers: authHeaders() });
+        if (res.status === 403) { onLogout(); return; }
+        setRules(await res.json());
+      } catch (e) { setError('Failed to load rules'); }
+      finally { setLoading(false); }
+    }
 
   async function checkConflicts(query) {
     if (!query) return;
@@ -230,6 +246,7 @@ export default function RulesConsole({ auth, onLogout }) {
   }
 
   function startEdit(rule) {
+    fetchIndexFields(); 
     setEditingId(rule.id);
     setForm({
       type: rule.type || 'BOOST',
@@ -482,13 +499,26 @@ export default function RulesConsole({ auth, onLogout }) {
                     {(form.type === 'BOOST' || form.type === 'BURY') && <>
                       <div style={s.fieldGroup}>
                         <label style={s.fieldLabel}>Boost Field</label>
-                        <input style={s.input} placeholder="e.g. brand" value={form.boostField}
-                          onChange={e => setForm({...form, boostField: e.target.value})} />
+                        <select style={s.input} value={form.boostField}
+                          onChange={e => { setForm({...form, boostField: e.target.value, boostValue: ''}); fetchFieldValues(e.target.value); }}>
+                          <option value="">Select field...</option>
+                          {indexFields.filter(f => f.facetable).map(f => (
+                            <option key={f.name} value={f.name}>{f.name} ({f.type})</option>
+                          ))}
+                        </select>
                       </div>
                       <div style={s.fieldGroup}>
                         <label style={s.fieldLabel}>Boost Value</label>
-                        <input style={s.input} placeholder="e.g. Duracell" value={form.boostValue}
-                          onChange={e => setForm({...form, boostValue: e.target.value})} />
+                        {fieldValues.length > 0 ? (
+                          <select style={s.input} value={form.boostValue}
+                            onChange={e => setForm({...form, boostValue: e.target.value})}>
+                            <option value="">Select value...</option>
+                            {fieldValues.map(v => <option key={v} value={v}>{v}</option>)}
+                          </select>
+                        ) : (
+                          <input style={s.input} placeholder="e.g. Duracell" value={form.boostValue}
+                            onChange={e => setForm({...form, boostValue: e.target.value})} />
+                        )}
                       </div>
                       <div style={s.fieldGroup}>
                         <label style={s.fieldLabel}>Factor</label>
@@ -638,7 +668,7 @@ export default function RulesConsole({ auth, onLogout }) {
 function ruleDetails(rule) {
   let detail = '';
   if (rule.type === 'BOOST' || rule.type === 'BURY')
-    detail = `${rule.boostField}: ${rule.boostValue} ×${rule.boostFactor}`;
+    detail = `${rule.boostField}: ${rule.boostValue} ×${rule.boostFactor ?? 1.5}`;
   else if (rule.type === 'PIN')
     detail = `Pins: ${(rule.pinnedIds||[]).join(', ')}`;
   else if (rule.type === 'SYNONYM') {
