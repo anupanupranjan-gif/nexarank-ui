@@ -16,12 +16,15 @@ export default function AiSuggestions({ auth }) {
   const [alerts, setAlerts]                 = useState([]);
   const [newWatchedQuery, setNewWatchedQuery] = useState({query:'', expectedMinCtr:'', expectedMaxPosition:'', notes:''});
   const [addingWatched, setAddingWatched]   = useState(false);
+  const [signals, setSignals]       = useState([]);
+  const [seedingDemo, setSeedingDemo] = useState(false);
+  const [signalSuggestions, setSignalSuggestions] = useState([]);
 
   function authHeaders() {
     return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth.token}` };
   }
 
-  useEffect(() => { fetchSuggestions(); fetchConfig(); fetchWatchedQueries(); }, []);
+  useEffect(() => { fetchSuggestions(); fetchConfig(); fetchWatchedQueries(); fetchSignals(); }, []);
 
   async function fetchSuggestions() {
     setLoading(true);
@@ -65,6 +68,27 @@ async function fetchWatchedQueries() {
     if (wqRes.ok) setWatchedQueries(await wqRes.json());
     if (alertRes.ok) setAlerts(await alertRes.json());
   } catch (e) {}
+}
+async function fetchSignals() {
+  try {
+    const [sigRes, sigSugRes] = await Promise.all([
+      fetch(`${API_BASE}/signals/active`, { headers: authHeaders() }),
+      fetch(`${API_BASE}/suggestions/signals`, { headers: authHeaders() })
+    ]);
+    if (sigRes.ok) setSignals(await sigRes.json());
+    if (sigSugRes.ok) setSignalSuggestions(await sigSugRes.json());
+  } catch (e) {}
+}
+
+async function seedDemoSignals() {
+  setSeedingDemo(true);
+  try {
+    await fetch(`${API_BASE}/signals/seed-demo`, {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify(['P001','P002','P003','P004'])
+    });
+    fetchSignals();
+  } catch (e) {} finally { setSeedingDemo(false); }
 }
 
 async function addWatchedQuery() {
@@ -329,6 +353,84 @@ async function deleteWatchedQuery(id) {
                   onClick={() => deleteWatchedQuery(alert.watchedQueryId)}>Remove</button>
               </div>
             ))}
+          </div>
+
+          {/* Business Signals */}
+          <div style={s.section}>
+            <div style={s.sectionHeader}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
+                <div>
+                  <div style={s.sectionTitle}>
+                    <span style={s.sectionIcon}>📡</span>
+                    Business Signals
+                  </div>
+                  <div style={s.sectionDesc}>
+                    ERP/PIM signals — inventory, margin, promotions, seasonal flags
+                  </div>
+                </div>
+                <button style={s.refreshBtn} onClick={seedDemoSignals} disabled={seedingDemo}>
+                  {seedingDemo ? 'Seeding...' : '🧪 Seed Demo Data'}
+                </button>
+              </div>
+            </div>
+
+            {signals.length > 0 && (
+              <div style={{marginBottom: 16}}>
+                <div style={{fontSize:12, fontWeight:700, color:'#64748b', marginBottom:8, textTransform:'uppercase'}}>
+                  Active Signals ({signals.length})
+                </div>
+                <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
+                  {signals.map((sig, i) => (
+                    <div key={i} style={{
+                      padding:'4px 10px', borderRadius:20, fontSize:11, fontWeight:600,
+                      background: sig.signalType === 'PROMOTED' || sig.signalType === 'SEASONAL'
+                        ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                      color: sig.signalType === 'PROMOTED' || sig.signalType === 'SEASONAL'
+                        ? '#16a34a' : '#dc2626',
+                      border: `1px solid ${sig.signalType === 'PROMOTED' || sig.signalType === 'SEASONAL'
+                        ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`
+                    }}>
+                      {sig.productId} · {sig.signalType}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {signalSuggestions.length === 0 ? (
+              <div style={s.empty}>
+                No business signals. Click "Seed Demo Data" to load test signals,
+                or ingest real signals via POST /api/v1/signals/ingest
+              </div>
+            ) : (
+              <div style={s.cards}>
+                {signalSuggestions.map((sig, i) => (
+                  <div key={i} style={{
+                    ...s.card,
+                    borderLeft: `4px solid ${sig.type === 'BOOST' ? '#22c55e' : '#ef4444'}`
+                  }}>
+                    <div style={s.cardTop}>
+                      <div style={{
+                        ...s.cardType,
+                        background: sig.type === 'BOOST' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+                        color: sig.type === 'BOOST' ? '#16a34a' : '#dc2626'
+                      }}>{sig.type}</div>
+                      <div style={{fontSize:11, color:'#94a3b8'}}>{sig.signalType}</div>
+                    </div>
+                    <div style={s.cardQuery}>{sig.productId}</div>
+                    <div style={s.cardReason}>{sig.reason}</div>
+                    {sig.value && (
+                      <div style={{fontSize:11, color:'#64748b', marginTop:4}}>
+                        Signal: {sig.value}
+                      </div>
+                    )}
+                    <div style={{fontSize:10, color:'#94a3b8', marginTop:6}}>
+                      Source: {sig.source}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </>
       )}
