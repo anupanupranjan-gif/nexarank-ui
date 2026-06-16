@@ -26,6 +26,17 @@ export default function App() {
       permissions: data.permissions || [],
     };
     localStorage.setItem('nexarank_auth', JSON.stringify(authData));
+    // Set role-appropriate default tab, clear any stale tab from previous session
+    const defaultTab = {
+      STAKEHOLDER:  'all',
+      VIEWER:       'all',
+      MERCHANDISER: 'all',
+      APPROVER:     'pending',
+      ADMIN:        'all',
+      TENANT_ADMIN: 'all',
+      SUPER_ADMIN:  'all',
+    }[data.role] || 'all';
+    localStorage.setItem('nexarank_active_tab', defaultTab);
     setAuth(authData);
   }
 

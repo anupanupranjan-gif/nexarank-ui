@@ -123,9 +123,10 @@ export default function RulesConsole({ auth, onLogout }) {
   const [historyRule, setHistoryRule] = useState(null);
   const [previewUrl, setPreviewUrl]   = useState(null); // rule whose history drawer is open
 
-  const canCreate  = ['MERCHANDISER','APPROVER','ADMIN'].includes(auth.role);
-  const canApprove = ['APPROVER','ADMIN'].includes(auth.role);
-  const canDelete  = ['APPROVER','ADMIN'].includes(auth.role);
+  const canCreate  = ['MERCHANDISER','APPROVER','ADMIN','TENANT_ADMIN','SUPER_ADMIN'].includes(auth.role);
+  const canApprove = ['APPROVER','ADMIN','TENANT_ADMIN','SUPER_ADMIN'].includes(auth.role);
+  const canDelete  = ['APPROVER','ADMIN','TENANT_ADMIN','SUPER_ADMIN'].includes(auth.role);
+  const isStakeholder = auth.role === 'STAKEHOLDER';
   const [indexFields, setIndexFields] = useState([]);
   const [fieldValues, setFieldValues] = useState([]);
 
@@ -303,10 +304,37 @@ export default function RulesConsole({ auth, onLogout }) {
     : rules;
 
   const hasPermission = (perm) => auth.permissions && auth.permissions.includes(perm);
+  const ROLE_ALLOWED_TABS = {
+    STAKEHOLDER:  [],
+    VIEWER:       ['all','analytics','click-intelligence','search-quality'],
+    MERCHANDISER: ['all','pending','ab-tests','analytics','ai-suggestions','click-intelligence','search-quality'],
+    APPROVER:     ['all','pending','ab-tests','analytics','ai-suggestions','click-intelligence','search-quality','curation'],
+    ADMIN:        null,
+    TENANT_ADMIN: null,
+    SUPER_ADMIN:  null,
+  };
+  const allowedTabs = ROLE_ALLOWED_TABS[auth.role] ?? null;
   const visibleGroups = NAV_GROUPS.map(g => ({
     ...g,
-    items: g.items.filter(i => !i.permission || hasPermission(i.permission))
+    items: g.items.filter(i => {
+      if (allowedTabs !== null && !allowedTabs.includes(i.key)) return false;
+      // If role explicitly allows this tab, skip permission check
+      if (allowedTabs !== null && allowedTabs.includes(i.key)) return true;
+      // ADMIN/TENANT_ADMIN/SUPER_ADMIN fall through to permission check
+      return !i.permission || hasPermission(i.permission);
+    })
   })).filter(g => g.items.length > 0);
+
+  if (isStakeholder) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: 16, background: '#f8f9fa' }}>
+        <div style={{ fontSize: 48 }}>✉</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: '#1a202c' }}>You're set up for email reports</div>
+        <div style={{ fontSize: 13, color: '#64748b' }}>Your role is Stakeholder — you'll receive digest emails and alerts but don't have dashboard access.</div>
+        <button onClick={onLogout} style={{ marginTop: 8, padding: '8px 20px', borderRadius: 8, border: '1px solid #e1e4e8', background: '#fff', cursor: 'pointer', fontSize: 13 }}>Sign out</button>
+      </div>
+    );
+  }
 
   return (
     <div style={s.shell}>
@@ -719,6 +747,9 @@ function statusColor(status) {
 
 function roleColor(role) {
   return {
+    STAKEHOLDER:  { background: 'rgba(168,85,247,0.15)',  color: '#a855f7' },
+    TENANT_ADMIN: { background: 'rgba(255,68,68,0.15)',   color: '#ff6b6b' },
+    SUPER_ADMIN:  { background: 'rgba(255,68,68,0.15)',   color: '#ff6b6b' },
     ADMIN:        { background: 'rgba(255,68,68,0.15)',   color: '#ff6b6b' },
     APPROVER:     { background: 'rgba(0,230,118,0.15)',   color: '#00e676' },
     MERCHANDISER: { background: '#e8f0fe',   color: '#4da6ff' },
