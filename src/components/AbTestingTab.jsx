@@ -86,7 +86,7 @@ export default function AbTestingTab({ auth }) {
     } catch (e) { setError(e.message); }
   }
 
-  const approvedRules = rules.filter(r => r.status === 'APPROVED');
+  const liveRules = rules.filter(r => r.status === 'LIVE');
 
   const ctr = (clicks, impressions) =>
     impressions === 0 ? '—' : (clicks / impressions * 100).toFixed(1) + '%';
@@ -120,7 +120,7 @@ export default function AbTestingTab({ auth }) {
             <select style={ab.select} value={form.ruleAId}
               onChange={e => setForm({ ...form, ruleAId: e.target.value })}>
               <option value="">Select rule…</option>
-              {approvedRules.map(r => (
+              {liveRules.map(r => (
                 <option key={r.id} value={r.id}>
                   [{r.type}] {r.query} {r.boostField ? `· ${r.boostField}×${r.boostFactor}` : ''}
                 </option>
@@ -132,7 +132,7 @@ export default function AbTestingTab({ auth }) {
             <select style={ab.select} value={form.ruleBId}
               onChange={e => setForm({ ...form, ruleBId: e.target.value })}>
               <option value="">Select rule…</option>
-              {approvedRules.map(r => (
+              {liveRules.map(r => (
                 <option key={r.id} value={r.id}>
                   [{r.type}] {r.query} {r.boostField ? `· ${r.boostField}×${r.boostFactor}` : ''}
                 </option>

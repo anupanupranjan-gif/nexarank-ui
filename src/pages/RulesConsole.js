@@ -128,7 +128,9 @@ export default function RulesConsole({ auth, onLogout }) {
   const canCreate  = ['MERCHANDISER','APPROVER','ADMIN','TENANT_ADMIN','SUPER_ADMIN'].includes(auth.role);
   const canApprove = ['APPROVER','ADMIN','TENANT_ADMIN','SUPER_ADMIN'].includes(auth.role);
   const canDelete  = ['APPROVER','ADMIN','TENANT_ADMIN','SUPER_ADMIN'].includes(auth.role);
+  const canPromote = ['ADMIN','TENANT_ADMIN','SUPER_ADMIN'].includes(auth.role);
   const isStakeholder = auth.role === 'STAKEHOLDER';
+  const [autoPublishRules, setAutoPublishRules] = useState(true);
   const [indexFields, setIndexFields] = useState([]);
   const [fieldValues, setFieldValues] = useState([]);
 
@@ -141,7 +143,7 @@ export default function RulesConsole({ auth, onLogout }) {
     return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth.token}` };
   }
 
-  useEffect(() => { fetchProjects(); fetchIndexFields(); }, []);
+  useEffect(() => { fetchProjects(); fetchIndexFields(); if (canPromote) fetchTenantSettings(); }, []);
   useEffect(() => { if (auth?.token) fetchPreviewUrl(); }, [auth?.token]);
 
   async function fetchPreviewUrl() {
@@ -157,6 +159,27 @@ export default function RulesConsole({ auth, onLogout }) {
       const res = await fetch(`${API_BASE}/admin/tenants/${auth.tenantId}/projects`, { headers: authHeaders() });
       if (res.ok) setProjects(await res.json());
     } catch (e) { console.error('Failed to load projects', e); }
+  }
+
+  async function fetchTenantSettings() {
+    try {
+      const res = await fetch(`${API_BASE}/admin/tenants/${auth.tenantId}`, { headers: authHeaders() });
+      if (res.ok) {
+        const t = await res.json();
+        setAutoPublishRules(t.autoPublishRules !== false);
+      }
+    } catch (e) { /* default to auto-publish on */ }
+  }
+
+  async function toggleAutoPublish() {
+    const next = !autoPublishRules;
+    setAutoPublishRules(next);
+    try {
+      await fetch(`${API_BASE}/admin/tenants/${auth.tenantId}`, {
+        method: 'PUT', headers: authHeaders(),
+        body: JSON.stringify({ autoPublishRules: String(next) }),
+      });
+    } catch (e) { setError('Failed to update auto-publish setting'); }
   }
 
   function handleProjectSwitch(projectId) {
@@ -220,13 +243,26 @@ export default function RulesConsole({ auth, onLogout }) {
     finally { setSaving(false); }
   }
 
-  async function approveRule(id) {
-    await fetch(`${API_BASE}/rules/${id}/approve`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ comment: 'Approved' }) });
+  async function submitForReview(id) {
+    await fetch(`${API_BASE}/rules/${id}/submit`, { method: 'PATCH', headers: authHeaders() });
+    fetchRules();
+  }
+  async function approveRule(id, publish) {
+    await fetch(`${API_BASE}/rules/${id}/approve`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ comment: 'Approved', publish: !!publish }) });
     fetchRules();
   }
   async function rejectRule(id) {
     const comment = window.prompt('Reason for rejection:') || 'Rejected';
     await fetch(`${API_BASE}/rules/${id}/reject`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ comment }) });
+    fetchRules();
+  }
+  async function promoteToLive(id) {
+    await fetch(`${API_BASE}/rules/${id}/promote`, { method: 'PATCH', headers: authHeaders() });
+    fetchRules();
+  }
+  async function demoteFromLive(id) {
+    const targetStatus = window.confirm('OK = revert to APPROVED, Cancel = revert to DRAFT') ? 'APPROVED' : 'DRAFT';
+    await fetch(`${API_BASE}/rules/${id}/demote`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify({ targetStatus }) });
     fetchRules();
   }
   async function toggleRule(id) {
@@ -610,7 +646,15 @@ export default function RulesConsole({ auth, onLogout }) {
                     {activeTab === 'pending' ? 'Pending Review' : 'All Rules'}
                     <span style={s.countBadge}>{displayedRules.length}</span>
                   </div>
-                  <button style={s.refreshBtn} onClick={fetchRules}>↻ Refresh</button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {canPromote && (
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#64748b', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={autoPublishRules} onChange={toggleAutoPublish} />
+                        Auto-publish approved rules
+                      </label>
+                    )}
+                    <button style={s.refreshBtn} onClick={fetchRules}>↻ Refresh</button>
+                  </div>
                 </div>
 
                 {loading ? (
@@ -658,11 +702,29 @@ export default function RulesConsole({ auth, onLogout }) {
                                   <button style={{...s.actionBtn, ...s.actionEdit}}
                                     onClick={() => startEdit(rule)} title="Edit rule">✎</button>
                                 )}
+                              {canCreate && rule.status === 'DRAFT' && (
+                                  <button style={{...s.actionBtn, ...s.actionApprove}}
+                                    onClick={() => submitForReview(rule.id)} title="Submit for review">➤</button>
+                                )}
                               {canApprove && rule.status === 'PENDING_REVIEW' && <>
-                                  <button style={{...s.actionBtn, ...s.actionApprove}} onClick={() => approveRule(rule.id)}>✓</button>
+                                  <button style={{...s.actionBtn, ...s.actionApprove}}
+                                    onClick={() => approveRule(rule.id, false)}
+                                    title={autoPublishRules ? 'Approve (auto-publishes to live)' : 'Approve'}>✓</button>
+                                  {!autoPublishRules && (
+                                    <button style={{...s.actionBtn, ...s.actionApprove}}
+                                      onClick={() => approveRule(rule.id, true)} title="Approve and publish live">✓▲</button>
+                                  )}
                                   <button style={{...s.actionBtn, ...s.actionReject}} onClick={() => rejectRule(rule.id)}>✕</button>
                                 </>}
-                                {rule.status === 'APPROVED' && canApprove && (
+                                {rule.status === 'APPROVED' && canPromote && !autoPublishRules && (
+                                  <button style={{...s.actionBtn, ...s.actionApprove}}
+                                    onClick={() => promoteToLive(rule.id)} title="Publish live">▲</button>
+                                )}
+                                {rule.status === 'LIVE' && canPromote && (
+                                  <button style={{...s.actionBtn, ...s.actionReject}}
+                                    onClick={() => demoteFromLive(rule.id)} title="Revert from live">▼</button>
+                                )}
+                                {rule.status === 'LIVE' && canApprove && (
                                   <button style={s.actionBtn} onClick={() => toggleRule(rule.id)}>
                                     {rule.enabled ? '⏸' : '▶'}
                                   </button>
@@ -743,6 +805,7 @@ function statusColor(status) {
   return {
     PENDING_REVIEW: { background: 'rgba(255,171,0,0.12)', color: '#ffab00', border: '1px solid rgba(255,171,0,0.3)' },
     APPROVED:       { background: 'rgba(0,230,118,0.12)', color: '#00e676', border: '1px solid rgba(0,230,118,0.3)' },
+    LIVE:           { background: 'rgba(0,119,255,0.15)', color: '#0077ff', border: '1px solid rgba(0,119,255,0.4)' },
     REJECTED:       { background: 'rgba(255,68,68,0.12)',  color: '#ff6b6b', border: '1px solid rgba(255,68,68,0.3)' },
     DISABLED:       { background: 'rgba(107,140,186,0.1)', color: '#4a5568', border: '1px solid #e1e4e8' },
     DRAFT:          { background: 'rgba(0,180,255,0.1)',   color: '#00b4ff', border: '1px solid rgba(0,180,255,0.3)' },
