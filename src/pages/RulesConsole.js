@@ -11,6 +11,7 @@ import ClickIntelligence from './ClickIntelligence';
 import SearchQuality from './SearchQuality';
 import SearchEngineConfig from './SearchEngineConfig';
 import AbTestingTab from '../components/AbTestingTab';
+import RulePerformanceTab from '../components/RulePerformanceTab';
 import TriggerConditionBuilder from '../components/TriggerConditionBuilder';
 import VersionHistoryTab from '../components/VersionHistoryTab';
 import PipelineEditor from './PipelineEditor';
@@ -30,6 +31,7 @@ const NAV_GROUPS = [
       { key: 'all',     label: 'Rules',          icon: '⚡', permission: 'RULES_VIEW' },
       { key: 'pending', label: 'Pending Review',  icon: '◷', permission: 'RULES_APPROVE' },
       { key: 'ab-tests', label: 'A/B Tests', icon: '⚖', permission: 'RULES_VIEW' },
+      { key: 'rule-performance', label: 'Rule Performance', icon: '📈', permission: 'RULES_VIEW' },
   ]},
   { label: 'CONFIGURATION', items: [
       { key: 'facets',        label: 'Facet Manager',   icon: '▤', permission: 'FACET_VIEW' },
@@ -131,7 +133,7 @@ export default function RulesConsole({ auth, onLogout }) {
   const [fieldValues, setFieldValues] = useState([]);
 
   useEffect(() => {
-    const nonRuleTabs = ['users','facets','engine-config','click-intelligence','search-quality'];
+    const nonRuleTabs = ['users','facets','engine-config','click-intelligence','search-quality','rule-performance'];
     if (!nonRuleTabs.includes(activeTab)) fetchRules();
   }, [activeTab]);
 
@@ -306,9 +308,9 @@ export default function RulesConsole({ auth, onLogout }) {
   const hasPermission = (perm) => auth.permissions && auth.permissions.includes(perm);
   const ROLE_ALLOWED_TABS = {
     STAKEHOLDER:  [],
-    VIEWER:       ['all','analytics','click-intelligence','search-quality'],
-    MERCHANDISER: ['all','pending','ab-tests','analytics','ai-suggestions','click-intelligence','search-quality'],
-    APPROVER:     ['all','pending','ab-tests','analytics','ai-suggestions','click-intelligence','search-quality','curation'],
+    VIEWER:       ['all','analytics','click-intelligence','search-quality','rule-performance'],
+    MERCHANDISER: ['all','pending','ab-tests','analytics','ai-suggestions','click-intelligence','search-quality','rule-performance'],
+    APPROVER:     ['all','pending','ab-tests','analytics','ai-suggestions','click-intelligence','search-quality','curation','rule-performance'],
     ADMIN:        null,
     TENANT_ADMIN: null,
     SUPER_ADMIN:  null,
@@ -459,6 +461,8 @@ export default function RulesConsole({ auth, onLogout }) {
             <UserGroups auth={auth} />
           ) : activeTab === 'ab-tests' ? (
             <AbTestingTab auth={auth} />
+          ) : activeTab === 'rule-performance' ? (
+            <RulePerformanceTab auth={auth} />
           ) : activeTab === 'audit' ? (
             <AuditLog auth={auth} />
           ) : activeTab === 'pipeline' ? (
