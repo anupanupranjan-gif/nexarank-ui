@@ -716,7 +716,7 @@ export default function RulesConsole({ auth, onLogout }) {
                                   )}
                                   <button style={{...s.actionBtn, ...s.actionReject}} onClick={() => rejectRule(rule.id)}>✕</button>
                                 </>}
-                                {rule.status === 'APPROVED' && canPromote && !autoPublishRules && (
+                                {rule.status === 'APPROVED' && canPromote && (
                                   <button style={{...s.actionBtn, ...s.actionApprove}}
                                     onClick={() => promoteToLive(rule.id)} title="Publish live">▲</button>
                                 )}
