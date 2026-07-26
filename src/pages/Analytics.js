@@ -4,11 +4,12 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 
 const API_BASE = '/nexarank/api/v1';
 
-export default function Analytics({ auth }) {
+export default function Analytics({ auth, onCreateRuleFromQuery }) {
   const [overview, setOverview] = useState(null);
   const [trends, setTrends] = useState([]);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(30);
+  const [creatingRuleFor, setCreatingRuleFor] = useState(null);
 
   function authHeaders() {
     return { 'Authorization': `Bearer ${auth.token}` };
@@ -44,6 +45,21 @@ export default function Analytics({ auth }) {
   const formatDate = (d) => d ? d.substring(5) : '';
   const formatPct = (v) => `${(v * 100).toFixed(1)}%`;
   const formatMs = (v) => v ? `${v}ms` : '';
+
+  async function createRuleFromQuery(query) {
+    setCreatingRuleFor(query);
+    try {
+      const res = await fetch(`${API_BASE}/suggestions/rule-type-for-query?query=${encodeURIComponent(query)}`, {
+        headers: authHeaders()
+      });
+      const suggestion = res.ok ? await res.json() : { type: 'BOOST', aiSuggestion: null };
+      onCreateRuleFromQuery && onCreateRuleFromQuery(query, suggestion.type, suggestion.aiSuggestion);
+    } catch (e) {
+      onCreateRuleFromQuery && onCreateRuleFromQuery(query, 'BOOST', null);
+    } finally {
+      setCreatingRuleFor(null);
+    }
+  }
 
   return (
     <div style={s.page}>
@@ -101,6 +117,13 @@ export default function Analytics({ auth }) {
               </div>
               <div style={s.kpiLabel}>Avg Latency</div>
               <div style={s.kpiSub}>{overview.avgLatencyMs < 500 ? 'Fast' : overview.avgLatencyMs < 1000 ? 'Normal' : 'Slow'}</div>
+            </div>
+            <div style={s.kpiCard}>
+              <div style={s.kpiValue}>
+                {overview.zeroResultActionedCount || 0}<span style={{fontSize:16, color:'#94a3b8'}}> / {overview.zeroResultUnactionedCount || 0}</span>
+              </div>
+              <div style={s.kpiLabel}>Zero-Result Actioned / Unactioned</div>
+              <div style={s.kpiSub}>Queries with a rule created vs. not yet</div>
             </div>
           </div>
 
@@ -216,14 +239,39 @@ export default function Analytics({ auth }) {
             ) : (
               <table style={s.table}>
                 <thead>
-                  <tr>{['Query','Occurrences','Action'].map(h=><th key={h} style={s.th}>{h}</th>)}</tr>
+                  <tr>{['Query','Occurrences','Status','Action'].map(h=><th key={h} style={s.th}>{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {overview.topZeroResultQueries.map((q,i) => (
                     <tr key={i} style={i%2===0?s.trEven:{}}>
                       <td style={s.td}><span style={s.queryText}>{q.query}</span></td>
                       <td style={s.td}><span style={{...s.ctrBadge, background:'#ef4444'}}>{q.occurrences}</span></td>
-                      <td style={s.td}><span style={s.actionHint}>→ Create SYNONYM or check index coverage</span></td>
+                      <td style={s.td}>
+                        {q.resolved ? (
+                          <span style={{...s.statusPill, background:'rgba(34,197,94,0.12)', color:'#16a34a'}}>
+                            ✓ Resolved — {q.ruleType} rule
+                          </span>
+                        ) : q.actioned ? (
+                          <span style={{...s.statusPill, background:'rgba(249,115,22,0.12)', color:'#f97316'}}>
+                            ⏳ Actioned — {q.ruleType} {q.ruleStatus}
+                          </span>
+                        ) : (
+                          <span style={{...s.statusPill, background:'rgba(107,140,186,0.12)', color:'#64748b'}}>
+                            Unactioned
+                          </span>
+                        )}
+                      </td>
+                      <td style={s.td}>
+                        {q.actioned ? (
+                          <span style={s.actionHint}>—</span>
+                        ) : (
+                          <button style={s.createRuleBtn}
+                            disabled={creatingRuleFor === q.query}
+                            onClick={() => createRuleFromQuery(q.query)}>
+                            {creatingRuleFor === q.query ? 'Loading...' : '+ Create Rule'}
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -285,6 +333,8 @@ const s = {
   ctrBarFill:     { height: '100%', borderRadius: 3, transition: 'width 0.3s ease' },
   alertBadge:     { fontSize: 11, background: '#ef4444', color: '#fff', padding: '2px 8px', borderRadius: 10, marginLeft: 8, fontWeight: 600 },
   actionHint:     { fontSize: 11, color: '#64748b', fontStyle: 'italic' },
+  statusPill:     { fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 10, whiteSpace: 'nowrap' },
+  createRuleBtn:  { background: '#e8f0fe', border: '1px solid rgba(0,119,255,0.3)', color: '#0366d6', padding: '5px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 },
   qualityGrid:    { display: 'flex', gap: 24 },
   qualityStat:    { textAlign: 'center', padding: '12px 24px', background: '#f8f9fa', borderRadius: 8 },
   qualityValue:   { fontSize: 28, fontWeight: 800, marginBottom: 4 },

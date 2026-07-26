@@ -24,6 +24,7 @@ const emptyRule = {
   boostFactor: '', pinnedIds: '', synonyms: '', activateAt: '', expireAt: '',
   requireQuery: true,
   triggerConditions: [],
+  sourceZeroResultQuery: null,
 };
 
 const NAV_GROUPS = [
@@ -236,6 +237,7 @@ export default function RulesConsole({ auth, onLogout }) {
         ),
         ...(form.activateAt && { activateAt: new Date(form.activateAt).toISOString() }),
         ...(form.expireAt   && { expireAt:   new Date(form.expireAt).toISOString() }),
+        ...(form.sourceZeroResultQuery && { sourceZeroResultQuery: form.sourceZeroResultQuery }),
       };
       await fetch(`${API_BASE}/rules`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
       setForm(emptyRule); fetchRules();
@@ -302,6 +304,7 @@ export default function RulesConsole({ auth, onLogout }) {
         facetField: c.facetField || '',
         facetValues: c.facetValues || [],
       })),
+      sourceZeroResultQuery: rule.sourceZeroResultQuery || null,
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -309,6 +312,26 @@ export default function RulesConsole({ auth, onLogout }) {
   function cancelEdit() {
     setEditingId(null);
     setForm(emptyRule);
+  }
+
+  // NR-69: "Create Rule" from the zero-result query list (Analytics tab) —
+  // switches to the rule creation form pre-populated with the query as the
+  // trigger, defaulting to the AI-suggested rule type, and tags the rule with
+  // sourceZeroResultQuery so it links back to the originating query for
+  // actioned/resolved tracking on the dashboard.
+  function handleCreateRuleFromZeroResult(query, suggestedType, aiSuggestion) {
+    fetchIndexFields();
+    setEditingId(null);
+    setForm({
+      ...emptyRule,
+      type: suggestedType || 'BOOST',
+      query,
+      synonyms: aiSuggestion || '',
+      sourceZeroResultQuery: query,
+    });
+    setActiveTab('all');
+    localStorage.setItem('nexarank_active_tab', 'all');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   async function saveEdit() {
@@ -326,6 +349,7 @@ export default function RulesConsole({ auth, onLogout }) {
         ),
         ...(form.activateAt && { activateAt: new Date(form.activateAt).toISOString() }),
         ...(form.expireAt   && { expireAt:   new Date(form.expireAt).toISOString() }),
+        ...(form.sourceZeroResultQuery && { sourceZeroResultQuery: form.sourceZeroResultQuery }),
       };
       await fetch(`${API_BASE}/rules/${editingId}`, {
         method: 'PUT', headers: authHeaders(), body: JSON.stringify(payload)
@@ -492,7 +516,7 @@ export default function RulesConsole({ auth, onLogout }) {
           ) : activeTab === 'curation' ? (
             <SearchQualityCuration auth={auth} />
           ) : activeTab === 'analytics' ? (
-            <Analytics auth={auth} />
+            <Analytics auth={auth} onCreateRuleFromQuery={handleCreateRuleFromZeroResult} />
           ) : activeTab === 'groups' ? (
             <UserGroups auth={auth} />
           ) : activeTab === 'ab-tests' ? (
@@ -513,6 +537,11 @@ export default function RulesConsole({ auth, onLogout }) {
                       {editingId ? 'Editing will re-submit for approval' : 'Rules are queued for approval before going live'}
                     </div>
                   </div>
+                  {!editingId && form.sourceZeroResultQuery && (
+                    <div style={s.zeroResultBanner}>
+                      ⚡ Creating a rule for zero-result query "{form.sourceZeroResultQuery}" — it'll show as Resolved on the Analytics dashboard once this rule is live and the query returns results.
+                    </div>
+                  )}
                   <div style={s.formGrid}>
                     <div style={s.fieldGroup}>
                       <label style={s.fieldLabel}>Type</label>
@@ -871,6 +900,7 @@ const s = {
   cardHeader:{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' },
   cardTitle: { fontSize: '14px', fontWeight: 700, color: '#1a202c', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '8px' },
   cardHint:  { fontSize: '11px', color: '#4a5568' },
+  zeroResultBanner: { background: 'rgba(0,119,255,0.08)', border: '1px solid rgba(0,119,255,0.25)', borderRadius: 8, padding: '8px 14px', fontSize: 12, color: '#0366d6', marginBottom: 16 },
   countBadge:{ background: '#e8f0fe', color: '#4da6ff', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', border: '1px solid rgba(0,119,255,0.2)' },
   refreshBtn:{ background: '#f0f6fc', border: '1px solid rgba(0,119,255,0.2)', color: '#4da6ff', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', cursor: 'pointer' },
   formGrid:  { display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' },
