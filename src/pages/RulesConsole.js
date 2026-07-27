@@ -15,6 +15,7 @@ import RulePerformanceTab from '../components/RulePerformanceTab';
 import TriggerConditionBuilder from '../components/TriggerConditionBuilder';
 import VersionHistoryTab from '../components/VersionHistoryTab';
 import PipelineEditor from './PipelineEditor';
+import ContentManager from './ContentManager';
 
 const API_BASE = '/nexarank/api/v1';
 const RULE_TYPES = ['BOOST', 'PIN', 'BURY', 'SYNONYM'];
@@ -33,6 +34,9 @@ const NAV_GROUPS = [
       { key: 'pending', label: 'Pending Review',  icon: '◷', permission: 'RULES_APPROVE' },
       { key: 'ab-tests', label: 'A/B Tests', icon: '⚖', permission: 'RULES_VIEW' },
       { key: 'rule-performance', label: 'Rule Performance', icon: '📈', permission: 'RULES_VIEW' },
+  ]},
+  { label: 'EXPERIENCE MANAGER', items: [
+      { key: 'content-rules', label: 'Content Rules', icon: '🖼', permission: 'RULES_VIEW' },
   ]},
   { label: 'CONFIGURATION', items: [
       { key: 'facets',        label: 'Facet Manager',   icon: '▤', permission: 'FACET_VIEW' },
@@ -368,9 +372,9 @@ export default function RulesConsole({ auth, onLogout }) {
   const hasPermission = (perm) => auth.permissions && auth.permissions.includes(perm);
   const ROLE_ALLOWED_TABS = {
     STAKEHOLDER:  [],
-    VIEWER:       ['all','analytics','click-intelligence','search-quality','rule-performance'],
-    MERCHANDISER: ['all','pending','ab-tests','analytics','ai-suggestions','click-intelligence','search-quality','rule-performance'],
-    APPROVER:     ['all','pending','ab-tests','analytics','ai-suggestions','click-intelligence','search-quality','curation','rule-performance'],
+    VIEWER:       ['all','analytics','click-intelligence','search-quality','rule-performance','content-rules'],
+    MERCHANDISER: ['all','pending','ab-tests','analytics','ai-suggestions','click-intelligence','search-quality','rule-performance','content-rules'],
+    APPROVER:     ['all','pending','ab-tests','analytics','ai-suggestions','click-intelligence','search-quality','curation','rule-performance','content-rules'],
     ADMIN:        null,
     TENANT_ADMIN: null,
     SUPER_ADMIN:  null,
@@ -527,6 +531,8 @@ export default function RulesConsole({ auth, onLogout }) {
             <AuditLog auth={auth} />
           ) : activeTab === 'pipeline' ? (
             <PipelineEditor auth={auth} />
+          ) : activeTab === 'content-rules' ? (
+            <ContentManager auth={auth} />
           ) : (
             <>
               {canCreate && (
