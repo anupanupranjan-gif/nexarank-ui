@@ -23,7 +23,7 @@ const RULE_TYPES = ['BOOST', 'PIN', 'BURY', 'SYNONYM', 'REDIRECT'];
 const emptyRule = {
   type: 'BOOST', query: '', boostField: '', boostValue: '',
   boostFactor: '', pinnedIds: '', synonyms: '', redirectUrl: '', activateAt: '', expireAt: '',
-  requireQuery: true,
+  requireQuery: true, priority: 50,
   triggerConditions: [],
   sourceZeroResultQuery: null,
 };
@@ -118,7 +118,6 @@ export default function RulesConsole({ auth, onLogout }) {
   const [activeTab, setActiveTab]     = useState(
     () => localStorage.getItem('nexarank_active_tab') || 'all'
   );
-  const [conflicts, setConflicts]     = useState([]);
   const [previewData, setPreviewData] = useState(null);
   const [loading, setLoading]         = useState(true);
   const [saving, setSaving]           = useState(false);
@@ -218,12 +217,33 @@ export default function RulesConsole({ auth, onLogout }) {
       finally { setLoading(false); }
     }
 
-  async function checkConflicts(query) {
-    if (!query) return;
+  // NR-106 / ADR-013: soft, non-blocking duplicate-trigger warning. Debounced
+  // on the fields that define a rule's trigger (type/query/requireQuery/
+  // conditions) so it re-checks live as the merchandiser edits the form,
+  // without gating Create/Save on the result — the ADR is explicit that a
+  // temporary rule is allowed to intentionally outrank a standing one.
+  useEffect(() => {
+    if (!form.type || !form.query || !form.query.trim()) { setPreviewData(null); return; }
+    const t = setTimeout(() => { checkRulePreview(); }, 500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.type, form.query, form.requireQuery, JSON.stringify(form.triggerConditions), editingId]);
+
+  async function checkRulePreview() {
     try {
-      const res = await fetch(`${API_BASE}/rules/conflicts?query=${encodeURIComponent(query)}`, { headers: authHeaders() });
-      if (res.ok) setConflicts(await res.json());
-    } catch (e) {}
+      const body = {
+        ...(editingId && { id: editingId }),
+        type: form.type,
+        query: form.query,
+        priority: Number(form.priority) || 50,
+        requireQuery: form.requireQuery,
+        triggerConditions: form.triggerConditions.filter(
+          c => c.facetField && c.facetValues && c.facetValues.length > 0
+        ),
+      };
+      const res = await fetch(`${API_BASE}/rules/preview`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(body) });
+      if (res.ok) setPreviewData(await res.json());
+    } catch (e) { /* preview is best-effort and never blocks save */ }
   }
 
   async function createRule() {
@@ -232,6 +252,7 @@ export default function RulesConsole({ auth, onLogout }) {
     try {
       const payload = {
         type: form.type, query: form.query,
+        priority: Number(form.priority) || 50,
         ...(form.type === 'BOOST' && { boostField: form.boostField, boostValue: form.boostValue, boostFactor: parseFloat(form.boostFactor) || null }),
         ...(form.type === 'PIN'   && { pinnedIds: form.pinnedIds.split(',').map(s=>s.trim()).filter(Boolean) }),
         ...(form.type === 'BURY'  && { boostField: form.boostField, boostValue: form.boostValue, boostFactor: parseFloat(form.boostFactor) || null }),
@@ -307,6 +328,7 @@ export default function RulesConsole({ auth, onLogout }) {
       activateAt: rule.activateAt ? rule.activateAt.slice(0, 16) : '',
       expireAt: rule.expireAt ? rule.expireAt.slice(0, 16) : '',
       requireQuery: rule.requireQuery !== false,
+      priority: rule.priority ?? 50,
       triggerConditions: (rule.triggerConditions || []).map(c => ({
         facetField: c.facetField || '',
         facetValues: c.facetValues || [],
@@ -347,6 +369,7 @@ export default function RulesConsole({ auth, onLogout }) {
     try {
       const payload = {
         type: form.type, query: form.query,
+        priority: Number(form.priority) || 50,
         ...(form.type === 'BOOST' && { boostField: form.boostField, boostValue: form.boostValue, boostFactor: parseFloat(form.boostFactor) || null }),
         ...(form.type === 'PIN'   && { pinnedIds: form.pinnedIds.split(',').map(s=>s.trim()).filter(Boolean) }),
         ...(form.type === 'BURY'  && { boostField: form.boostField, boostValue: form.boostValue, boostFactor: parseFloat(form.boostFactor) || null }),
@@ -553,6 +576,14 @@ export default function RulesConsole({ auth, onLogout }) {
                       ⚡ Creating a rule for zero-result query "{form.sourceZeroResultQuery}" — it'll show as Resolved on the Analytics dashboard once this rule is live and the query returns results.
                     </div>
                   )}
+                  {previewData && previewData.duplicateTriggers && previewData.duplicateTriggers.length > 0 && (
+                    <div style={s.duplicateWarningBanner}>
+                      ⚠ {previewData.duplicateTriggers.length} other LIVE {form.type} rule{previewData.duplicateTriggers.length > 1 ? 's' : ''} already
+                      {' '}fire{previewData.duplicateTriggers.length > 1 ? '' : 's'} on this exact trigger:
+                      {' '}{previewData.duplicateTriggers.map(d => `#${d.id.slice(0, 8)} (priority ${d.priority})`).join(', ')}.
+                      {' '}You can still save — the higher-priority rule wins at query time.
+                    </div>
+                  )}
                   <div style={s.formGrid}>
                     <div style={s.fieldGroup}>
                       <label style={s.fieldLabel}>Type</label>
@@ -565,6 +596,12 @@ export default function RulesConsole({ auth, onLogout }) {
                       <label style={s.fieldLabel}>Query</label>
                       <input style={s.input} placeholder="e.g. car battery" value={form.query}
                         onChange={e => setForm({...form, query: e.target.value})} />
+                    </div>
+                    <div style={s.fieldGroup}>
+                      <label style={s.fieldLabel}>Priority</label>
+                      <input style={s.input} type="number" value={form.priority}
+                        onChange={e => setForm({...form, priority: e.target.value})} />
+                      <span style={{color:'#64748b', fontSize:10}}>Higher number wins when rules conflict</span>
                     </div>
                     {form.type !== 'SYNONYM' && (
                     <div style={{...s.fieldGroup, flex: '100%', minWidth: '100%'}}>
@@ -721,7 +758,7 @@ export default function RulesConsole({ auth, onLogout }) {
                     <table style={s.table}>
                       <thead>
                         <tr>
-                          {['Type','Query','Details','Status','Schedule','Submitted By','Actions'].map(h => (
+                          {['Type','Query','Priority','Details','Status','Schedule','Submitted By','Actions'].map(h => (
                             <th key={h} style={s.th}>{h}</th>
                           ))}
                         </tr>
@@ -733,6 +770,7 @@ export default function RulesConsole({ auth, onLogout }) {
                               <span style={{...s.typeBadge, ...typeColor(rule.type)}}>{rule.type || '—'}</span>
                             </td>
                             <td style={s.td}><span style={s.queryText}>{rule.query || '—'}</span></td>
+                            <td style={s.td}>{rule.priority ?? 50}</td>
                             <td style={{...s.td, ...s.detailText}}>{ruleDetails(rule)}</td>
                             <td style={s.td}>
                               <span style={{...s.statusBadge, ...statusColor(rule.status)}}>{rule.status || '—'}</span>
@@ -935,6 +973,7 @@ const s = {
   cardTitle: { fontSize: '14px', fontWeight: 700, color: '#1a202c', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '8px' },
   cardHint:  { fontSize: '11px', color: '#4a5568' },
   zeroResultBanner: { background: 'rgba(0,119,255,0.08)', border: '1px solid rgba(0,119,255,0.25)', borderRadius: 8, padding: '8px 14px', fontSize: 12, color: '#0366d6', marginBottom: 16 },
+  duplicateWarningBanner: { background: 'rgba(255,171,0,0.1)', border: '1px solid rgba(255,171,0,0.3)', borderRadius: 8, padding: '8px 14px', fontSize: 12, color: '#b45309', marginBottom: 16 },
   countBadge:{ background: '#e8f0fe', color: '#4da6ff', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', border: '1px solid rgba(0,119,255,0.2)' },
   refreshBtn:{ background: '#f0f6fc', border: '1px solid rgba(0,119,255,0.2)', color: '#4da6ff', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', cursor: 'pointer' },
   formGrid:  { display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' },
