@@ -15,9 +15,27 @@ const STATUSES = ['DRAFT', 'PENDING_REVIEW', 'ACTIVE', 'INACTIVE'];
 // component verbatim.
 const CONTEXT_FIELDS = ['pageType', 'category', 'query', 'customerSegment', 'deviceType'];
 
+const PROMO_ITEM_COUNT = 4;
+
+// NR-105: PROMO_GRID items live as flattened item1_*..item4_* keys inside the
+// same flat contentPayload map (matching the item1_headline/item1_image_url/
+// item1_cta_link convention NR-86 established in search-ui's HomePage.jsx —
+// fits the existing column with no migration, and keeps the 4 live NR-86 demo
+// rules working unmodified).
+function emptyPromoItems() {
+  const obj = {};
+  for (let i = 1; i <= PROMO_ITEM_COUNT; i++) {
+    obj[`item${i}_headline`] = '';
+    obj[`item${i}_image_url`] = '';
+    obj[`item${i}_cta_link`] = '';
+  }
+  return obj;
+}
+
 const emptyPayload = {
   headline: '', subheadline: '', image_url: '', cta_text: '', cta_link: '',
   background_color: '#f5f5f5', text_color: '#1a202c',
+  ...emptyPromoItems(),
 };
 
 const emptyRule = {
@@ -232,32 +250,54 @@ export default function ContentManager({ auth }) {
             </div>
 
             <div style={s.sectionLabel}>Content</div>
+            {form.zone === 'PROMO_GRID' ? (
+              <div style={s.promoItemsBox}>
+                <div style={s.conditionsHint}>Up to {PROMO_ITEM_COUNT} items · leave a slot's Image URL and Headline blank to skip it</div>
+                {Array.from({ length: PROMO_ITEM_COUNT }, (_, i) => i + 1).map(i => (
+                  <div key={i} style={s.promoItemRow}>
+                    <div style={s.promoItemBadge}>Item {i}</div>
+                    <input style={{ ...s.input, flex: 1 }} placeholder="Image URL"
+                      value={form.contentPayload[`item${i}_image_url`] || ''}
+                      onChange={e => updatePayload(`item${i}_image_url`, e.target.value)} />
+                    <input style={{ ...s.input, flex: 1 }} placeholder="Headline"
+                      value={form.contentPayload[`item${i}_headline`] || ''}
+                      onChange={e => updatePayload(`item${i}_headline`, e.target.value)} />
+                    <input style={{ ...s.input, flex: 1 }} placeholder="CTA link (/category/x)"
+                      value={form.contentPayload[`item${i}_cta_link`] || ''}
+                      onChange={e => updatePayload(`item${i}_cta_link`, e.target.value)} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={s.formGrid}>
+                <div style={{ ...s.fieldGroup, flex: '100%' }}>
+                  <label style={s.fieldLabel}>Headline</label>
+                  <input style={s.input} value={form.contentPayload.headline}
+                    onChange={e => updatePayload('headline', e.target.value)} />
+                </div>
+                <div style={{ ...s.fieldGroup, flex: '100%' }}>
+                  <label style={s.fieldLabel}>Subheadline</label>
+                  <input style={s.input} value={form.contentPayload.subheadline}
+                    onChange={e => updatePayload('subheadline', e.target.value)} />
+                </div>
+                <div style={{ ...s.fieldGroup, flex: '100%' }}>
+                  <label style={s.fieldLabel}>Image URL</label>
+                  <input style={s.input} placeholder="https://..." value={form.contentPayload.image_url}
+                    onChange={e => updatePayload('image_url', e.target.value)} />
+                </div>
+                <div style={s.fieldGroup}>
+                  <label style={s.fieldLabel}>CTA Text</label>
+                  <input style={s.input} value={form.contentPayload.cta_text}
+                    onChange={e => updatePayload('cta_text', e.target.value)} />
+                </div>
+                <div style={s.fieldGroup}>
+                  <label style={s.fieldLabel}>CTA Link</label>
+                  <input style={s.input} placeholder="/sale/summer" value={form.contentPayload.cta_link}
+                    onChange={e => updatePayload('cta_link', e.target.value)} />
+                </div>
+              </div>
+            )}
             <div style={s.formGrid}>
-              <div style={{ ...s.fieldGroup, flex: '100%' }}>
-                <label style={s.fieldLabel}>Headline</label>
-                <input style={s.input} value={form.contentPayload.headline}
-                  onChange={e => updatePayload('headline', e.target.value)} />
-              </div>
-              <div style={{ ...s.fieldGroup, flex: '100%' }}>
-                <label style={s.fieldLabel}>Subheadline</label>
-                <input style={s.input} value={form.contentPayload.subheadline}
-                  onChange={e => updatePayload('subheadline', e.target.value)} />
-              </div>
-              <div style={{ ...s.fieldGroup, flex: '100%' }}>
-                <label style={s.fieldLabel}>Image URL</label>
-                <input style={s.input} placeholder="https://..." value={form.contentPayload.image_url}
-                  onChange={e => updatePayload('image_url', e.target.value)} />
-              </div>
-              <div style={s.fieldGroup}>
-                <label style={s.fieldLabel}>CTA Text</label>
-                <input style={s.input} value={form.contentPayload.cta_text}
-                  onChange={e => updatePayload('cta_text', e.target.value)} />
-              </div>
-              <div style={s.fieldGroup}>
-                <label style={s.fieldLabel}>CTA Link</label>
-                <input style={s.input} placeholder="/sale/summer" value={form.contentPayload.cta_link}
-                  onChange={e => updatePayload('cta_link', e.target.value)} />
-              </div>
               <div style={s.fieldGroup}>
                 <label style={s.fieldLabel}>Background Color</label>
                 <div style={s.colorRow}>
@@ -398,10 +438,41 @@ export default function ContentManager({ auth }) {
 
 // ── Live preview ────────────────────────────────────────────────────────────
 
+// NR-105: mirrors search-ui/src/pages/HomePage.jsx's parsePromoItems — same
+// item{i}_image_url/item{i}_headline/item{i}_cta_link convention, item kept
+// only if it has an image or headline.
+function parsePromoItems(payload) {
+  const items = [];
+  for (let i = 1; i <= PROMO_ITEM_COUNT; i++) {
+    const imageUrl = payload[`item${i}_image_url`];
+    const headline = payload[`item${i}_headline`];
+    const ctaLink = payload[`item${i}_cta_link`];
+    if (imageUrl || headline) items.push({ imageUrl, headline, ctaLink });
+  }
+  return items;
+}
+
 function BannerPreview({ zone, payload }) {
   const bg = payload.background_color || '#f5f5f5';
   const fg = payload.text_color || '#1a202c';
   const isBar = zone === 'ANNOUNCEMENT_BAR';
+
+  if (zone === 'PROMO_GRID') {
+    const items = parsePromoItems(payload);
+    return items.length === 0 ? (
+      <div style={p.promoEmpty}>No items yet — fill in Item 1 above to see a preview</div>
+    ) : (
+      <div style={p.promoStrip}>
+        {items.map((item, i) => (
+          <div key={i} style={p.promoCard}>
+            {item.imageUrl && <div style={{ ...p.promoImg, backgroundImage: `url(${item.imageUrl})` }} />}
+            {item.headline && <div style={p.promoHeadline}>{item.headline}</div>}
+            {item.ctaLink && <div style={p.promoCtaLink}>{item.ctaLink} →</div>}
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -496,6 +567,9 @@ const s = {
   sectionLabel: { fontSize: 11, fontWeight: 700, color: '#2d3748', textTransform: 'uppercase', letterSpacing: '1.5px', marginTop: 16, marginBottom: 8 },
   conditionsBox: { border: '1px solid #e1e4e8', borderRadius: 8, padding: '12px 14px', background: '#f8f9fa' },
   conditionsHint: { fontSize: 10, color: '#4a5568', marginBottom: 8 },
+  promoItemsBox: { border: '1px solid #e1e4e8', borderRadius: 8, padding: '12px 14px', background: '#f8f9fa', display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 },
+  promoItemRow: { display: 'flex', alignItems: 'center', gap: 8 },
+  promoItemBadge: { background: '#e8f0fe', color: '#0366d6', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, minWidth: 44, textAlign: 'center' },
   conditionRow: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 },
   andBadge: { background: '#e8f0fe', color: '#0366d6', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4 },
   removeBtn: { background: 'none', border: '1px solid #fca5a5', color: '#c0392b', borderRadius: 5, padding: '4px 8px', fontSize: 13, cursor: 'pointer' },
@@ -535,6 +609,12 @@ const p = {
   ctaBtn: { border: 'none', borderRadius: 6, padding: '8px 18px', fontSize: 12, fontWeight: 700, cursor: 'default' },
   barContent: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, fontSize: 13, fontWeight: 600 },
   ctaBar: { fontSize: 12, fontWeight: 700, textDecoration: 'underline' },
+  promoStrip: { display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 },
+  promoCard: { flex: '0 0 140px', border: '1px solid #e1e4e8', borderRadius: 8, overflow: 'hidden', background: '#fff' },
+  promoImg: { height: 90, backgroundSize: 'cover', backgroundPosition: 'center', background: '#f1f5f9' },
+  promoHeadline: { fontSize: 12, fontWeight: 700, color: '#1a202c', padding: '8px 8px 2px' },
+  promoCtaLink: { fontSize: 10, color: '#0366d6', padding: '0 8px 8px' },
+  promoEmpty: { color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: '30px 10px' },
 };
 
 const d = {
