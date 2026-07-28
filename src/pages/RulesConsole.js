@@ -18,11 +18,11 @@ import PipelineEditor from './PipelineEditor';
 import ContentManager from './ContentManager';
 
 const API_BASE = '/nexarank/api/v1';
-const RULE_TYPES = ['BOOST', 'PIN', 'BURY', 'SYNONYM'];
+const RULE_TYPES = ['BOOST', 'PIN', 'BURY', 'SYNONYM', 'REDIRECT'];
 
 const emptyRule = {
   type: 'BOOST', query: '', boostField: '', boostValue: '',
-  boostFactor: '', pinnedIds: '', synonyms: '', activateAt: '', expireAt: '',
+  boostFactor: '', pinnedIds: '', synonyms: '', redirectUrl: '', activateAt: '', expireAt: '',
   requireQuery: true,
   triggerConditions: [],
   sourceZeroResultQuery: null,
@@ -227,6 +227,7 @@ export default function RulesConsole({ auth, onLogout }) {
   }
 
   async function createRule() {
+    if (!validateRedirectUrl(form)) return;
     setSaving(true);
     try {
       const payload = {
@@ -235,6 +236,7 @@ export default function RulesConsole({ auth, onLogout }) {
         ...(form.type === 'PIN'   && { pinnedIds: form.pinnedIds.split(',').map(s=>s.trim()).filter(Boolean) }),
         ...(form.type === 'BURY'  && { boostField: form.boostField, boostValue: form.boostValue, boostFactor: parseFloat(form.boostFactor) || null }),
         ...(form.type === 'SYNONYM' && { synonyms: form.synonyms.split(',').map(s=>s.trim()).filter(Boolean) }),
+        ...(form.type === 'REDIRECT' && { redirectUrl: form.redirectUrl.trim() }),
         requireQuery: form.requireQuery,
         triggerConditions: form.triggerConditions.filter(
           c => c.facetField && c.facetValues && c.facetValues.length > 0
@@ -301,6 +303,7 @@ export default function RulesConsole({ auth, onLogout }) {
       boostFactor: rule.boostFactor || '',
       pinnedIds: rule.pinnedIds && rule.pinnedIds.length > 0 ? rule.pinnedIds.join(', ') : (rule.pinnedIdsJson ? (() => { try { return JSON.parse(rule.pinnedIdsJson).join(', '); } catch(e) { return ''; } })() : ''),
       synonyms: (rule.synonyms || []).join(', '),
+      redirectUrl: rule.redirectUrl || '',
       activateAt: rule.activateAt ? rule.activateAt.slice(0, 16) : '',
       expireAt: rule.expireAt ? rule.expireAt.slice(0, 16) : '',
       requireQuery: rule.requireQuery !== false,
@@ -339,6 +342,7 @@ export default function RulesConsole({ auth, onLogout }) {
   }
 
   async function saveEdit() {
+    if (!validateRedirectUrl(form)) return;
     setSaving(true);
     try {
       const payload = {
@@ -347,6 +351,7 @@ export default function RulesConsole({ auth, onLogout }) {
         ...(form.type === 'PIN'   && { pinnedIds: form.pinnedIds.split(',').map(s=>s.trim()).filter(Boolean) }),
         ...(form.type === 'BURY'  && { boostField: form.boostField, boostValue: form.boostValue, boostFactor: parseFloat(form.boostFactor) || null }),
         ...(form.type === 'SYNONYM' && { synonyms: form.synonyms.split(',').map(s=>s.trim()).filter(Boolean) }),
+        ...(form.type === 'REDIRECT' && { redirectUrl: form.redirectUrl.trim() }),
         requireQuery: form.requireQuery,
         triggerConditions: form.triggerConditions.filter(
           c => c.facetField && c.facetValues && c.facetValues.length > 0
@@ -643,6 +648,14 @@ export default function RulesConsole({ auth, onLogout }) {
                           onChange={e => setForm({...form, synonyms: e.target.value})} />
                       </div>
                     )}
+                    {form.type === 'REDIRECT' && (
+                      <div style={{...s.fieldGroup, flex: 3}}>
+                        <label style={s.fieldLabel}>Redirect URL</label>
+                        <input style={{...s.input, color: '#1a202c'}} placeholder="/sale/black-friday or https://..." value={form.redirectUrl}
+                          onChange={e => setForm({...form, redirectUrl: e.target.value})} />
+                        <span style={{color:'#64748b', fontSize:10}}>Must start with / or https://</span>
+                      </div>
+                    )}
                     <div style={s.fieldGroup}>
                       <label style={s.fieldLabel}>Activate At</label>
                       <input style={s.input} type="datetime-local" value={form.activateAt}
@@ -800,12 +813,26 @@ export default function RulesConsole({ auth, onLogout }) {
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 
+// NR-88: mirrors the server-side check in MerchRuleService.validateRedirectUrl
+// so the user gets an immediate alert instead of a round-trip 400.
+function validateRedirectUrl(form) {
+  if (form.type !== 'REDIRECT') return true;
+  const url = (form.redirectUrl || '').trim();
+  if (!url || !(url.startsWith('/') || url.startsWith('https://'))) {
+    alert('Redirect URL is required and must start with / or https://');
+    return false;
+  }
+  return true;
+}
+
 function ruleDetails(rule) {
   let detail = '';
   if (rule.type === 'BOOST' || rule.type === 'BURY')
     detail = `${rule.boostField}: ${rule.boostValue} ×${rule.boostFactor ?? 1.5}`;
   else if (rule.type === 'PIN')
     detail = `Pins: ${(rule.pinnedIds||[]).join(', ')}`;
+  else if (rule.type === 'REDIRECT')
+    detail = `→ ${rule.redirectUrl || '—'}`;
   else if (rule.type === 'SYNONYM') {
     const syns = rule.synonyms && rule.synonyms.length > 0
       ? rule.synonyms
@@ -833,6 +860,7 @@ function typeColor(type) {
     PIN:     { background: 'rgba(0,230,118,0.12)', color: '#00e676', border: '1px solid rgba(0,230,118,0.3)' },
     BURY:    { background: 'rgba(255,68,68,0.12)',  color: '#ff6b6b', border: '1px solid rgba(255,68,68,0.3)' },
     SYNONYM: { background: 'rgba(180,0,255,0.12)', color: '#d066ff', border: '1px solid rgba(180,0,255,0.3)' },
+    REDIRECT: { background: 'rgba(255,153,0,0.12)', color: '#ff9900', border: '1px solid rgba(255,153,0,0.3)' },
   }[type] || { background: 'rgba(255,255,255,0.05)', color: '#4a5568' };
 }
 

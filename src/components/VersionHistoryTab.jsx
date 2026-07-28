@@ -10,7 +10,7 @@ const API = '/nexarank/api/v1/rules';
 const FIELDS = [
   'type', 'query', 'status', 'enabled', 'priority',
   'boostField', 'boostValue', 'boostFactor',
-  'pinnedIdsJson', 'synonymsJson',
+  'pinnedIdsJson', 'synonymsJson', 'redirectUrl',
   'activateAt', 'expireAt', 'submittedBy', 'approvedBy',
 ];
 
@@ -18,6 +18,7 @@ const FIELD_LABELS = {
   type: 'Type', query: 'Query', status: 'Status', enabled: 'Enabled',
   priority: 'Priority', boostField: 'Boost Field', boostValue: 'Boost Value',
   boostFactor: 'Boost Factor', pinnedIdsJson: 'Pinned IDs', synonymsJson: 'Synonyms',
+  redirectUrl: 'Redirect URL',
   activateAt: 'Activate At', expireAt: 'Expire At',
   submittedBy: 'Submitted By', approvedBy: 'Approved By',
 };
