@@ -42,10 +42,15 @@ export default function FacetManager({ auth }) {
       const res = await fetch('/nexarank/api/v1/engine-config/fields', { headers: authHeaders() });
       if (res.ok) {
         const fields = await res.json();
-        setEngineFields(fields.filter(f => f.facetable));
-        setShowFieldPicker(true);
+        const facetable = fields.filter(f => f.facetable);
+        if (facetable.length === 0) {
+          alert('No engine config found. Please configure the search engine first.');
+        } else {
+          setEngineFields(facetable);
+          setShowFieldPicker(true);
+        }
       } else {
-        alert('No engine config found. Please configure the search engine first.');
+        alert('Failed to fetch fields from search engine');
       }
     } catch (e) { alert('Failed to fetch fields from search engine'); }
     finally { setFetchingFields(false); }
