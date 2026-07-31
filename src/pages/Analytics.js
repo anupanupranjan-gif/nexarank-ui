@@ -7,6 +7,7 @@ const API_BASE = '/nexarank/api/v1';
 export default function Analytics({ auth, onCreateRuleFromQuery }) {
   const [overview, setOverview] = useState(null);
   const [trends, setTrends] = useState([]);
+  const [searchHealth, setSearchHealth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(30);
   const [creatingRuleFor, setCreatingRuleFor] = useState(null);
@@ -20,12 +21,14 @@ export default function Analytics({ auth, onCreateRuleFromQuery }) {
   async function fetchAll() {
     try {
       setLoading(true);
-      const [ovRes, trRes] = await Promise.all([
+      const [ovRes, trRes, shRes] = await Promise.all([
         fetch(`${API_BASE}/analytics/overview?days=${days}`, { headers: authHeaders() }),
-        fetch(`${API_BASE}/analytics/trends?days=${days}`, { headers: authHeaders() })
+        fetch(`${API_BASE}/analytics/trends?days=${days}`, { headers: authHeaders() }),
+        fetch(`${API_BASE}/analytics/search-health?days=${days}`, { headers: authHeaders() })
       ]);
       if (ovRes.ok) setOverview(await ovRes.json());
       if (trRes.ok) setTrends(await trRes.json());
+      if (shRes.ok) setSearchHealth(await shRes.json());
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }
@@ -167,6 +170,66 @@ export default function Analytics({ auth, onCreateRuleFromQuery }) {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
+            </div>
+          )}
+
+          {/* Search Health — NR-36 */}
+          {searchHealth && (
+            <div style={s.section}>
+              <div style={s.sectionTitle}>Search Health</div>
+
+              <div style={s.subsectionTitle}>Latency Percentiles</div>
+              <div style={s.rulesGrid}>
+                <div style={s.rulesStat}>
+                  <div style={{...s.rulesNumber, color:'#4a5568'}}>
+                    {searchHealth.latency.p50 != null ? `${searchHealth.latency.p50}ms` : 'N/A'}
+                  </div>
+                  <div style={s.rulesLabel}>p50</div>
+                </div>
+                <div style={s.rulesStat}>
+                  <div style={{...s.rulesNumber, color:'#f97316'}}>
+                    {searchHealth.latency.p95 != null ? `${searchHealth.latency.p95}ms` : 'N/A'}
+                  </div>
+                  <div style={s.rulesLabel}>p95</div>
+                </div>
+                <div style={s.rulesStat}>
+                  <div style={{...s.rulesNumber, color:'#ef4444'}}>
+                    {searchHealth.latency.p99 != null ? `${searchHealth.latency.p99}ms` : 'N/A'}
+                  </div>
+                  <div style={s.rulesLabel}>p99</div>
+                </div>
+                <div style={s.rulesStat}>
+                  <div style={{...s.rulesNumber, color:'#4a5568', fontSize: 18}}>
+                    {searchHealth.latency.sampleSize?.toLocaleString() ?? 0}
+                  </div>
+                  <div style={s.rulesLabel}>Sampled Searches</div>
+                </div>
+              </div>
+
+              <div style={{...s.subsectionTitle, marginTop: 20}}>Query Volume by Project</div>
+              {!searchHealth.projectVolume?.length ? (
+                <div style={s.empty}>No search traffic in this period.</div>
+              ) : (
+                <table style={s.table}>
+                  <thead>
+                    <tr>{['Project','Searches','Zero Results','Zero Result Rate'].map(h => <th key={h} style={s.th}>{h}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {searchHealth.projectVolume.map((p, i) => (
+                      <tr key={p.projectId} style={i % 2 === 0 ? s.trEven : {}}>
+                        <td style={s.td}><span style={s.queryText}>{p.projectName}</span></td>
+                        <td style={s.td}><span style={s.number}>{p.searches}</span></td>
+                        <td style={s.td}><span style={s.number}>{p.zeroResults}</span></td>
+                        <td style={s.td}>
+                          <span style={{...s.ctrBadge, background: p.zeroResultRate > 0.2 ? '#ef4444' : p.zeroResultRate > 0.1 ? '#f97316' : '#22c55e'}}>
+                            {(p.zeroResultRate * 100).toFixed(1)}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           )}
 
@@ -322,6 +385,7 @@ const s = {
   chartTitle:     { fontSize: 13, fontWeight: 600, color: '#4a5568', marginBottom: 12 },
   section:        { background: '#ffffff', border: '1px solid #e1e4e8', borderRadius: 10, padding: 20, marginBottom: 20 },
   sectionTitle:   { fontSize: 15, fontWeight: 700, color: '#1a202c', marginBottom: 16 },
+  subsectionTitle:{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 },
   table:          { width: '100%', borderCollapse: 'collapse' },
   th:             { padding: '8px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e1e4e8' },
   td:             { padding: '10px 12px', borderBottom: '1px solid #e1e4e8', verticalAlign: 'middle' },
