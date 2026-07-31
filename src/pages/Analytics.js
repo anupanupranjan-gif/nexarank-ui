@@ -10,6 +10,7 @@ export default function Analytics({ auth, onCreateRuleFromQuery }) {
   const [searchHealth, setSearchHealth] = useState(null);
   const [facetUsage, setFacetUsage] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [days, setDays] = useState(30);
   const [creatingRuleFor, setCreatingRuleFor] = useState(null);
 
@@ -52,6 +53,32 @@ export default function Analytics({ auth, onCreateRuleFromQuery }) {
   const formatPct = (v) => `${(v * 100).toFixed(1)}%`;
   const formatMs = (v) => v ? `${v}ms` : '';
 
+  // NR-36: PDF export — a "send to leadership" snapshot rather than a raw
+  // CSV/Excel data dump (the ticket's literal text), since the actual use
+  // case is a polished report for someone with no dashboard access (e.g. a
+  // STAKEHOLDER-role recipient). Fetched as a blob (not window.open) since
+  // the endpoint requires the Bearer token, not just a plain link.
+  async function downloadReportPdf() {
+    setDownloadingPdf(true);
+    try {
+      const res = await fetch(`${API_BASE}/analytics/report.pdf?days=${days}`, { headers: authHeaders() });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'nexarank-analytics-report.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert('Failed to generate PDF report');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }
+
   async function createRuleFromQuery(query) {
     setCreatingRuleFor(query);
     try {
@@ -74,11 +101,16 @@ export default function Analytics({ auth, onCreateRuleFromQuery }) {
           <div style={s.title}>Analytics</div>
           <div style={s.subtitle}>Search performance and rule effectiveness</div>
         </div>
-        <div style={s.periodSelector}>
-          {[7, 30, 90].map(d => (
-            <button key={d} style={{ ...s.periodBtn, ...(days === d ? s.periodBtnActive : {}) }}
-              onClick={() => setDays(d)}>{d}d</button>
-          ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={s.periodSelector}>
+            {[7, 30, 90].map(d => (
+              <button key={d} style={{ ...s.periodBtn, ...(days === d ? s.periodBtnActive : {}) }}
+                onClick={() => setDays(d)}>{d}d</button>
+            ))}
+          </div>
+          <button style={s.exportBtn} onClick={downloadReportPdf} disabled={downloadingPdf}>
+            {downloadingPdf ? 'Generating…' : '⬇ Download PDF Report'}
+          </button>
         </div>
       </div>
 
@@ -428,6 +460,7 @@ const s = {
   periodSelector: { display: 'flex', gap: 6 },
   periodBtn:      { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(0,119,255,0.2)', color: '#64748b', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 13 },
   periodBtnActive:{ background: 'rgba(0,119,255,0.2)', border: '1px solid rgba(0,119,255,0.4)', color: '#4a5568' },
+  exportBtn:      { background: 'linear-gradient(135deg, #0055cc, #0077ff)', color: '#fff', border: 'none', borderRadius: 6, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 0 12px rgba(0,119,255,0.25)' },
   loading:        { color: '#4a5568', padding: 40, textAlign: 'center' },
   empty:          { color: '#64748b', padding: 20, textAlign: 'center', fontSize: 13 },
   kpiGrid:        { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 },
