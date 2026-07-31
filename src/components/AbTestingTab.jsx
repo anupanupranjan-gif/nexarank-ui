@@ -6,7 +6,7 @@ import { useEffect, useState, useCallback } from 'react';
 
 const API = '/nexarank/api/v1';
 
-export default function AbTestingTab({ auth }) {
+export default function AbTestingTab({ auth, onViewRule }) {
   const [tests, setTests]       = useState([]);
   const [rules, setRules]       = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -87,6 +87,14 @@ export default function AbTestingTab({ auth }) {
   }
 
   const liveRules = rules.filter(r => r.status === 'LIVE');
+
+  // NR-119: rule identifier shown as the Variant A/B link — MerchRule has no
+  // dedicated "name" field, so this mirrors the same [TYPE] query convention
+  // already used in the create-test dropdown above. Falls back to a short
+  // id if the summary is missing (shouldn't happen — disabled rules are
+  // still fetched, not deleted).
+  const ruleLabel = (summary, ruleId) =>
+    summary ? `[${summary.type}] ${summary.query}` : `Rule #${(ruleId || '').slice(0, 8)}`;
 
   const ctr = (clicks, impressions) =>
     impressions === 0 ? '—' : (clicks / impressions * 100).toFixed(1) + '%';
@@ -187,18 +195,28 @@ export default function AbTestingTab({ auth }) {
                       </td>
                       <td style={ab.td}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          <button style={ab.ruleLink} onClick={() => onViewRule && onViewRule(t.ruleAId)}
+                            title="View / edit this rule">
+                            {ruleLabel(t.ruleA, t.ruleAId)}
+                          </button>
                           <span style={{ color: leader === 'A' ? '#00e676' : '#1a202c', fontSize: 12, fontWeight: leader === 'A' ? 700 : 400 }}>
                             {leader === 'A' ? '▲ ' : ''}{ctr(t.clicksA, t.impressionsA)} CTR
                           </span>
                           <span style={ab.metaText}>{t.impressionsA} impr · {t.clicksA} clicks</span>
+                          <span style={ab.actionSummary}>{t.ruleA ? t.ruleA.actionSummary : '—'}</span>
                         </div>
                       </td>
                       <td style={ab.td}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          <button style={ab.ruleLink} onClick={() => onViewRule && onViewRule(t.ruleBId)}
+                            title="View / edit this rule">
+                            {ruleLabel(t.ruleB, t.ruleBId)}
+                          </button>
                           <span style={{ color: leader === 'B' ? '#00e676' : '#1a202c', fontSize: 12, fontWeight: leader === 'B' ? 700 : 400 }}>
                             {leader === 'B' ? '▲ ' : ''}{ctr(t.clicksB, t.impressionsB)} CTR
                           </span>
                           <span style={ab.metaText}>{t.impressionsB} impr · {t.clicksB} clicks</span>
+                          <span style={ab.actionSummary}>{t.ruleB ? t.ruleB.actionSummary : '—'}</span>
                         </div>
                       </td>
                       <td style={ab.td}>
@@ -261,6 +279,8 @@ const ab = {
   td:          { padding: '10px 12px', color: '#1a202c', verticalAlign: 'middle' },
   queryText:   { color: '#1a202c', fontWeight: 600 },
   metaText:    { color: '#64748b', fontSize: 11 },
+  ruleLink:    { background: 'none', border: 'none', padding: 0, margin: 0, color: '#0077ff', fontWeight: 700, fontSize: 12, cursor: 'pointer', textDecoration: 'underline', textAlign: 'left', fontFamily: 'inherit' },
+  actionSummary: { color: '#4a5568', fontSize: 10.5, fontStyle: 'italic' },
   badge:       { display: 'inline-block', borderRadius: 5, padding: '2px 8px', fontSize: 10, fontWeight: 700, letterSpacing: '0.5px' },
   actionBtn:   { background: 'rgba(107,140,186,0.1)', border: '1px solid #e1e4e8', color: '#4a5568', borderRadius: 5, padding: '4px 8px', fontSize: 12, cursor: 'pointer' },
   actionPromote: { background: 'rgba(0,230,118,0.1)', border: '1px solid rgba(0,230,118,0.25)', color: '#00e676' },

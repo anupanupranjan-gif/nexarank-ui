@@ -343,6 +343,32 @@ export default function RulesConsole({ auth, onLogout }) {
     setForm(emptyRule);
   }
 
+  // NR-119: "view rule" link from the A/B Tests page — reuses the same
+  // edit form as the Rules list's ✎ button rather than a separate detail
+  // view. `rules` is already loaded (fetchRules() runs for the ab-tests tab
+  // too, and getAllRules() is unfiltered by status, so a DISABLED loser rule
+  // is still present here after a winner has been promoted). Falls back to a
+  // direct fetch in case the tab's rules list is stale.
+  async function viewRuleFromAbTest(ruleId) {
+    const cached = rules.find(r => r.id === ruleId);
+    if (cached) {
+      startEdit(cached);
+      setActiveTab('all');
+      localStorage.setItem('nexarank_active_tab', 'all');
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/rules/${ruleId}`, { headers: authHeaders() });
+      if (res.ok) {
+        startEdit(await res.json());
+        setActiveTab('all');
+        localStorage.setItem('nexarank_active_tab', 'all');
+      } else {
+        alert('Rule not found');
+      }
+    } catch (e) { alert('Failed to load rule'); }
+  }
+
   // NR-69: "Create Rule" from the zero-result query list (Analytics tab) —
   // switches to the rule creation form pre-populated with the query as the
   // trigger, defaulting to the AI-suggested rule type, and tags the rule with
@@ -552,7 +578,7 @@ export default function RulesConsole({ auth, onLogout }) {
           ) : activeTab === 'groups' ? (
             <UserGroups auth={auth} />
           ) : activeTab === 'ab-tests' ? (
-            <AbTestingTab auth={auth} />
+            <AbTestingTab auth={auth} onViewRule={viewRuleFromAbTest} />
           ) : activeTab === 'rule-performance' ? (
             <RulePerformanceTab auth={auth} />
           ) : activeTab === 'audit' ? (
