@@ -8,6 +8,7 @@ export default function Analytics({ auth, onCreateRuleFromQuery }) {
   const [overview, setOverview] = useState(null);
   const [trends, setTrends] = useState([]);
   const [searchHealth, setSearchHealth] = useState(null);
+  const [facetUsage, setFacetUsage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(30);
   const [creatingRuleFor, setCreatingRuleFor] = useState(null);
@@ -21,14 +22,16 @@ export default function Analytics({ auth, onCreateRuleFromQuery }) {
   async function fetchAll() {
     try {
       setLoading(true);
-      const [ovRes, trRes, shRes] = await Promise.all([
+      const [ovRes, trRes, shRes, fuRes] = await Promise.all([
         fetch(`${API_BASE}/analytics/overview?days=${days}`, { headers: authHeaders() }),
         fetch(`${API_BASE}/analytics/trends?days=${days}`, { headers: authHeaders() }),
-        fetch(`${API_BASE}/analytics/search-health?days=${days}`, { headers: authHeaders() })
+        fetch(`${API_BASE}/analytics/search-health?days=${days}`, { headers: authHeaders() }),
+        fetch(`${API_BASE}/analytics/facet-usage?days=${days}`, { headers: authHeaders() })
       ]);
       if (ovRes.ok) setOverview(await ovRes.json());
       if (trRes.ok) setTrends(await trRes.json());
       if (shRes.ok) setSearchHealth(await shRes.json());
+      if (fuRes.ok) setFacetUsage(await fuRes.json());
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }
@@ -233,6 +236,58 @@ export default function Analytics({ auth, onCreateRuleFromQuery }) {
             </div>
           )}
 
+          {/* Facet Usage — NR-36 */}
+          {facetUsage && (
+            <div style={s.section}>
+              <div style={s.sectionTitle}>
+                Facet Usage
+                {facetUsage.unusedFacets?.length > 0 && (
+                  <span style={s.alertBadge}>{facetUsage.unusedFacets.length} unused</span>
+                )}
+              </div>
+
+              {facetUsage.unusedFacets?.length > 0 && (
+                <div style={s.pendingAlert}>
+                  Unused this period: {facetUsage.unusedFacets.map(f => f.displayLabel).join(', ')}
+                </div>
+              )}
+
+              {!facetUsage.facets?.length ? (
+                <div style={s.empty}>No facets configured yet.</div>
+              ) : (
+                <table style={{...s.table, marginTop: 12}}>
+                  <thead>
+                    <tr>{['Facet','Total Selections','Top Values (selections · click rate)'].map(h => <th key={h} style={s.th}>{h}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {facetUsage.facets.map((f, i) => (
+                      <tr key={f.fieldName} style={i % 2 === 0 ? s.trEven : {}}>
+                        <td style={s.td}>
+                          <span style={s.queryText}>{f.displayLabel}</span>
+                          {!f.enabled && <span style={{...s.actionHint, marginLeft: 6}}>(disabled)</span>}
+                        </td>
+                        <td style={s.td}><span style={s.number}>{f.totalSelections}</span></td>
+                        <td style={s.td}>
+                          {!f.topValues?.length ? (
+                            <span style={s.actionHint}>No selections</span>
+                          ) : (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                              {f.topValues.map(v => (
+                                <span key={v.value} style={s.facetValueChip}>
+                                  {v.value} · {v.selections} · {(v.clickRate * 100).toFixed(0)}%
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
           {/* Search Quality Charts */}
           {(overview.latestNdcg10 || overview.latestMrr10) && (
             <div style={s.section}>
@@ -386,6 +441,7 @@ const s = {
   section:        { background: '#ffffff', border: '1px solid #e1e4e8', borderRadius: 10, padding: 20, marginBottom: 20 },
   sectionTitle:   { fontSize: 15, fontWeight: 700, color: '#1a202c', marginBottom: 16 },
   subsectionTitle:{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 },
+  facetValueChip: { fontSize: 11, color: '#4a5568', background: '#f8f9fa', border: '1px solid #e1e4e8', borderRadius: 10, padding: '2px 8px', whiteSpace: 'nowrap' },
   table:          { width: '100%', borderCollapse: 'collapse' },
   th:             { padding: '8px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e1e4e8' },
   td:             { padding: '10px 12px', borderBottom: '1px solid #e1e4e8', verticalAlign: 'middle' },
