@@ -4,6 +4,8 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 
 const API_BASE = '/nexarank/api/v1';
 
+const ADMIN_ROLES = ['ADMIN', 'TENANT_ADMIN', 'SUPER_ADMIN'];
+
 export default function Analytics({ auth, onCreateRuleFromQuery }) {
   const [overview, setOverview] = useState(null);
   const [trends, setTrends] = useState([]);
@@ -12,22 +14,49 @@ export default function Analytics({ auth, onCreateRuleFromQuery }) {
   const [loading, setLoading] = useState(true);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [days, setDays] = useState(30);
+  const [customRange, setCustomRange] = useState(false);
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
   const [creatingRuleFor, setCreatingRuleFor] = useState(null);
+
+  const isAdminUser = ADMIN_ROLES.includes(auth.role);
+  const rangeReady = !customRange || (customStart && customEnd);
 
   function authHeaders() {
     return { 'Authorization': `Bearer ${auth.token}` };
   }
 
-  useEffect(() => { fetchAll(); }, [days]);
+  // NR-36: which project's analytics to view. Own project (no override) for
+  // everyone; ADMIN/TENANT_ADMIN/SUPER_ADMIN may pick another project in the
+  // same tenant via the dropdown below (backend re-validates this — the
+  // dropdown is a convenience, not the actual access boundary).
+  function periodParams() {
+    const params = customRange ? `startDate=${customStart}&endDate=${customEnd}` : `days=${days}`;
+    return selectedProjectId ? `${params}&projectId=${selectedProjectId}` : params;
+  }
+
+  useEffect(() => {
+    if (!isAdminUser) return;
+    fetch(`/nexarank/api/v1/admin/tenants/${auth.tenantId}/projects`, { headers: authHeaders() })
+      .then(res => res.ok ? res.json() : [])
+      .then(setProjects)
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => { if (rangeReady) fetchAll(); }, [days, customRange, customStart, customEnd, selectedProjectId]);
 
   async function fetchAll() {
     try {
       setLoading(true);
+      const qs = periodParams();
       const [ovRes, trRes, shRes, fuRes] = await Promise.all([
-        fetch(`${API_BASE}/analytics/overview?days=${days}`, { headers: authHeaders() }),
-        fetch(`${API_BASE}/analytics/trends?days=${days}`, { headers: authHeaders() }),
-        fetch(`${API_BASE}/analytics/search-health?days=${days}`, { headers: authHeaders() }),
-        fetch(`${API_BASE}/analytics/facet-usage?days=${days}`, { headers: authHeaders() })
+        fetch(`${API_BASE}/analytics/overview?${qs}`, { headers: authHeaders() }),
+        fetch(`${API_BASE}/analytics/trends?${qs}`, { headers: authHeaders() }),
+        fetch(`${API_BASE}/analytics/search-health?${qs}`, { headers: authHeaders() }),
+        fetch(`${API_BASE}/analytics/facet-usage?${qs}`, { headers: authHeaders() })
       ]);
       if (ovRes.ok) setOverview(await ovRes.json());
       if (trRes.ok) setTrends(await trRes.json());
@@ -61,7 +90,7 @@ export default function Analytics({ auth, onCreateRuleFromQuery }) {
   async function downloadReportPdf() {
     setDownloadingPdf(true);
     try {
-      const res = await fetch(`${API_BASE}/analytics/report.pdf?days=${days}`, { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/analytics/report.pdf?${periodParams()}`, { headers: authHeaders() });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -101,13 +130,35 @@ export default function Analytics({ auth, onCreateRuleFromQuery }) {
           <div style={s.title}>Analytics</div>
           <div style={s.subtitle}>Search performance and rule effectiveness</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {isAdminUser && projects.length > 1 && (
+            <select style={s.projectSelect} value={selectedProjectId}
+              onChange={e => setSelectedProjectId(e.target.value)}>
+              <option value="">My Project ({auth.projectId})</option>
+              {projects.filter(p => p.id !== auth.projectId).map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          )}
           <div style={s.periodSelector}>
             {[7, 30, 90].map(d => (
-              <button key={d} style={{ ...s.periodBtn, ...(days === d ? s.periodBtnActive : {}) }}
-                onClick={() => setDays(d)}>{d}d</button>
+              <button key={d} style={{ ...s.periodBtn, ...(!customRange && days === d ? s.periodBtnActive : {}) }}
+                onClick={() => { setCustomRange(false); setDays(d); }}>{d}d</button>
             ))}
+            <button style={{ ...s.periodBtn, ...(customRange ? s.periodBtnActive : {}) }}
+              onClick={() => setCustomRange(true)}>Custom</button>
           </div>
+          {customRange && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input type="date" style={s.dateInput} value={customStart}
+                max={customEnd || undefined}
+                onChange={e => setCustomStart(e.target.value)} />
+              <span style={{ color: '#64748b', fontSize: 12 }}>to</span>
+              <input type="date" style={s.dateInput} value={customEnd}
+                min={customStart || undefined}
+                onChange={e => setCustomEnd(e.target.value)} />
+            </div>
+          )}
           <button style={s.exportBtn} onClick={downloadReportPdf} disabled={downloadingPdf}>
             {downloadingPdf ? 'Generating…' : '⬇ Download PDF Report'}
           </button>
@@ -123,7 +174,7 @@ export default function Analytics({ auth, onCreateRuleFromQuery }) {
             <div style={s.kpiCard}>
               <div style={s.kpiValue}>{overview.totalClicks?.toLocaleString()}</div>
               <div style={s.kpiLabel}>Total Clicks</div>
-              <div style={s.kpiSub}>Last {days} days</div>
+              <div style={s.kpiSub}>{overview.startDate} to {overview.endDate}</div>
             </div>
             <div style={s.kpiCard}>
               <div style={s.kpiValue}>{overview.totalSearches || 0}</div>
@@ -460,6 +511,8 @@ const s = {
   periodSelector: { display: 'flex', gap: 6 },
   periodBtn:      { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(0,119,255,0.2)', color: '#64748b', padding: '6px 14px', borderRadius: 6, cursor: 'pointer', fontSize: 13 },
   periodBtnActive:{ background: 'rgba(0,119,255,0.2)', border: '1px solid rgba(0,119,255,0.4)', color: '#4a5568' },
+  dateInput:      { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(0,119,255,0.2)', color: '#4a5568', padding: '5px 8px', borderRadius: 6, fontSize: 12 },
+  projectSelect:  { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(0,119,255,0.2)', color: '#4a5568', padding: '6px 10px', borderRadius: 6, fontSize: 13, cursor: 'pointer' },
   exportBtn:      { background: 'linear-gradient(135deg, #0055cc, #0077ff)', color: '#fff', border: 'none', borderRadius: 6, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', boxShadow: '0 0 12px rgba(0,119,255,0.25)' },
   loading:        { color: '#4a5568', padding: 40, textAlign: 'center' },
   empty:          { color: '#64748b', padding: 20, textAlign: 'center', fontSize: 13 },
