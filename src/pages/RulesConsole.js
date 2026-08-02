@@ -16,6 +16,7 @@ import TriggerConditionBuilder from '../components/TriggerConditionBuilder';
 import VersionHistoryTab from '../components/VersionHistoryTab';
 import PipelineEditor from './PipelineEditor';
 import ContentManager from './ContentManager';
+import SessionsModal from '../components/SessionsModal';
 
 const API_BASE = '/nexarank/api/v1';
 const RULE_TYPES = ['BOOST', 'PIN', 'BURY', 'SYNONYM', 'REDIRECT'];
@@ -128,6 +129,7 @@ export default function RulesConsole({ auth, onLogout }) {
   const [activeProject, setActiveProject] = useState(auth.projectId || 'main');
   const [historyRule, setHistoryRule] = useState(null);
   const [previewUrl, setPreviewUrl]   = useState(null); // rule whose history drawer is open
+  const [showSessions, setShowSessions] = useState(false); // NR-120
 
   const canCreate  = ['MERCHANDISER','APPROVER','ADMIN','TENANT_ADMIN','SUPER_ADMIN'].includes(auth.role);
   const canApprove = ['APPROVER','ADMIN','TENANT_ADMIN','SUPER_ADMIN'].includes(auth.role);
@@ -527,10 +529,15 @@ export default function RulesConsole({ auth, onLogout }) {
             </div>
           )}
           {sidebarOpen && (
+            <button style={s.logoutBtn} onClick={() => setShowSessions(true)} title="Active Sessions">🔐</button>
+          )}
+          {sidebarOpen && (
             <button style={s.logoutBtn} onClick={onLogout} title="Sign out">⎋</button>
           )}
         </div>
       </aside>
+
+      {showSessions && <SessionsModal auth={auth} onClose={() => setShowSessions(false)} />}
 
       {/* MAIN CONTENT */}
       <main style={s.main}>

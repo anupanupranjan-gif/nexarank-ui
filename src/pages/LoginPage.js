@@ -31,6 +31,7 @@ export default function LoginPage({ onLogin }) {
     try {
       const res = await fetch('/nexarank/api/v1/auth/login', {
         method: 'POST',
+        credentials: 'include', // NR-120: so the browser stores the HttpOnly refresh-token cookie
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
