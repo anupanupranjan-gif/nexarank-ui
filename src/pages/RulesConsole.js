@@ -429,7 +429,11 @@ export default function RulesConsole({ auth, onLogout }) {
   const ROLE_ALLOWED_TABS = {
     STAKEHOLDER:  [],
     VIEWER:       ['all','analytics','click-intelligence','search-quality','rule-performance','content-rules'],
-    MERCHANDISER: ['all','pending','ab-tests','analytics','ai-suggestions','click-intelligence','search-quality','rule-performance','content-rules'],
+    // NR-121: backend already permitted MERCHANDISER on /api/v1/judgments/**
+    // (curation) - this client-side gate was stricter than the API for no
+    // reason found, and merchandisers are exactly who should be curating
+    // the judgment sets that inform their own rule decisions.
+    MERCHANDISER: ['all','pending','ab-tests','analytics','ai-suggestions','click-intelligence','search-quality','curation','rule-performance','content-rules'],
     APPROVER:     ['all','pending','ab-tests','analytics','ai-suggestions','click-intelligence','search-quality','curation','rule-performance','content-rules'],
     ADMIN:        null,
     TENANT_ADMIN: null,
