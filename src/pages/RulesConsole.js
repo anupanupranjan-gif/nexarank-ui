@@ -131,6 +131,13 @@ export default function RulesConsole({ auth, onLogout }) {
   const [previewUrl, setPreviewUrl]   = useState(null); // rule whose history drawer is open
   const [showSessions, setShowSessions] = useState(false); // NR-120
 
+  // NR-121 follow-up: badges previously showed the raw projectId, which is
+  // a human-readable slug ("main") for the seed default tenant but a raw
+  // UUID for any tenant whose projects were created via the admin API —
+  // display the project's name instead, falling back to the id only for
+  // the brief window before fetchProjects() resolves.
+  const activeProjectName = projects.find(p => p.id === auth.projectId)?.name || auth.projectId;
+
   const canCreate  = ['MERCHANDISER','APPROVER','ADMIN','TENANT_ADMIN','SUPER_ADMIN'].includes(auth.role);
   const canApprove = ['APPROVER','ADMIN','TENANT_ADMIN','SUPER_ADMIN'].includes(auth.role);
   const canDelete  = ['APPROVER','ADMIN','TENANT_ADMIN','SUPER_ADMIN'].includes(auth.role);
@@ -571,7 +578,7 @@ export default function RulesConsole({ auth, onLogout }) {
           {sidebarOpen && (
             <div style={s.userInfo}>
               <div style={s.userName}>{auth.username}</div>
-              <div style={s.tenantBadge}>{auth.tenantId} / {auth.projectId}</div>
+              <div style={s.tenantBadge}>{auth.tenantId} / {activeProjectName}</div>
               <div style={{...s.roleBadge, ...roleColor(auth.role)}}>{auth.role}</div>
             </div>
           )}
@@ -599,7 +606,7 @@ export default function RulesConsole({ auth, onLogout }) {
             </div>
             <div style={s.tenantContext}>
               <span style={s.tenantLabel}>{auth.tenantId}</span>
-              <span style={s.projectLabel}>{auth.projectId}</span>
+              <span style={s.projectLabel}>{activeProjectName}</span>
             </div>
             <div style={s.topBarTime}>{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
           </div>
