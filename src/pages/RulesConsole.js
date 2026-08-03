@@ -161,8 +161,13 @@ export default function RulesConsole({ auth, onLogout }) {
   }
 
   async function fetchProjects() {
+    // NR-121 step 6 / NR-122: self-service "what can I switch into" list,
+    // scoped to the caller (tenant-wide roles see every enabled tenant
+    // project, project-scoped roles see only their own assignments) —
+    // NOT the ADMIN-only /admin/tenants/{id}/projects endpoint Analytics'
+    // separate cross-project reporting dropdown uses.
     try {
-      const res = await fetch(`${API_BASE}/admin/tenants/${auth.tenantId}/projects`, { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/auth/available-projects`, { headers: authHeaders() });
       if (res.ok) setProjects(await res.json());
     } catch (e) { console.error('Failed to load projects', e); }
   }
@@ -188,10 +193,48 @@ export default function RulesConsole({ auth, onLogout }) {
     } catch (e) { setError('Failed to update auto-publish setting'); }
   }
 
-  function handleProjectSwitch(projectId) {
+  // NR-121 step 6 / NR-122: previously only mutated local component state
+  // (setActiveProject + a direct auth.projectId mutation) and re-fetched
+  // rules with the SAME unchanged access token — since NR-121 step 3 the
+  // active project is embedded in the JWT itself, so nothing was ever
+  // actually re-scoped; the badge/dropdown just looked switched. Real fix:
+  // exchange the still-valid refresh cookie for a token scoped to the
+  // requested project via POST /auth/refresh, persist it exactly like
+  // login does, then reload — simplest way to guarantee every tab's own
+  // data fetch (rules, facets, content rules, analytics, etc.) picks up
+  // the newly-scoped token rather than auditing each tab's fetch effects.
+  async function handleProjectSwitch(projectId) {
+    if (projectId === activeProject) return;
     setActiveProject(projectId);
-    auth.projectId = projectId;
-    fetchRules();
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ projectId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setActiveProject(auth.projectId);
+        setError(data.error || 'Failed to switch project');
+        return;
+      }
+      const updated = {
+        token: data.token,
+        username: data.username,
+        role: data.role,
+        roles: data.roles,
+        tenantId: data.tenantId,
+        projectId: data.projectId,
+        groupId: data.groupId || '',
+        permissions: data.permissions || [],
+      };
+      localStorage.setItem('nexarank_auth', JSON.stringify(updated));
+      window.location.reload();
+    } catch (e) {
+      setActiveProject(auth.projectId);
+      setError('Failed to switch project');
+    }
   }
   async function fetchIndexFields() {
     try {
