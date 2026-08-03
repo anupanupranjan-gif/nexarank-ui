@@ -19,10 +19,18 @@ const ROLE_COLORS = {
   ADMIN:        { bg: 'rgba(239,68,68,0.12)',  border: 'rgba(239,68,68,0.35)',   color: '#ef4444' },
 };
 
+// NR-121 step 7: project-scoped roles (MERCHANDISER/APPROVER) live in
+// user_projects, not User.role — PROJECT_ADMIN isn't a stored role value,
+// it's a user holding both on the same project.
+const PROJECT_SCOPED_ROLES = ['MERCHANDISER', 'APPROVER'];
+
 export default function UserManagement({ auth }) {
   const [users, setUsers] = useState([]);
   const [groups, setGroups] = useState([]);
   const [memberships, setMemberships] = useState({});
+  const [projects, setProjects] = useState([]);
+  const [projectRoles, setProjectRoles] = useState({}); // userId -> [{id, projectId, role}]
+  const [roleAssignForm, setRoleAssignForm] = useState({}); // userId -> { projectId, role }
   const [form, setForm] = useState({ username: '', password: '', email: '', displayName: '', role: 'VIEWER', groupIds: [] });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,12 +48,29 @@ export default function UserManagement({ auth }) {
     } catch (e) {}
   }, [auth.token]);
 
+  const fetchProjects = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/admin/tenants/${auth.tenantId}/projects`, { headers: authHeaders() });
+      if (res.ok) setProjects(await res.json());
+    } catch (e) {}
+  }, [auth.token, auth.tenantId]);
+
   const fetchMembershipsForUser = useCallback(async (userId) => {
     try {
       const res = await fetch(`${API_BASE}/users/${userId}/groups`, { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         setMemberships(m => ({ ...m, [userId]: data.map(x => x.groupId) }));
+      }
+    } catch (e) {}
+  }, [auth.token]);
+
+  const fetchProjectRolesForUser = useCallback(async (userId) => {
+    try {
+      const res = await fetch(`${API_BASE}/users/${userId}/projects`, { headers: authHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        setProjectRoles(m => ({ ...m, [userId]: data }));
       }
     } catch (e) {}
   }, [auth.token]);
@@ -60,8 +85,30 @@ export default function UserManagement({ auth }) {
     finally { setLoading(false); }
   }, [auth.token]);
 
-  useEffect(() => { fetchUsers(); fetchGroups(); }, [fetchUsers, fetchGroups]);
+  useEffect(() => { fetchUsers(); fetchGroups(); fetchProjects(); }, [fetchUsers, fetchGroups, fetchProjects]);
   useEffect(() => { users.forEach(u => fetchMembershipsForUser(u.id)); }, [users.length, fetchMembershipsForUser]);
+  useEffect(() => {
+    users.filter(u => PROJECT_SCOPED_ROLES.includes(u.role)).forEach(u => fetchProjectRolesForUser(u.id));
+  }, [users.length, fetchProjectRolesForUser]);
+
+  async function assignProjectRole(userId) {
+    const sel = roleAssignForm[userId];
+    if (!sel || !sel.projectId || !sel.role) return;
+    if (sel.role === 'PROJECT_ADMIN') {
+      await fetch(`${API_BASE}/users/${userId}/projects/${sel.projectId}/project-admin`, { method: 'POST', headers: authHeaders() });
+    } else {
+      await fetch(`${API_BASE}/users/${userId}/projects/${sel.projectId}`, {
+        method: 'POST', headers: authHeaders(), body: JSON.stringify({ role: sel.role }),
+      });
+    }
+    setRoleAssignForm(f => ({ ...f, [userId]: { projectId: '', role: '' } }));
+    fetchProjectRolesForUser(userId);
+  }
+
+  async function removeProjectRole(userId, projectId, role) {
+    await fetch(`${API_BASE}/users/${userId}/projects/${projectId}?role=${role}`, { method: 'DELETE', headers: authHeaders() });
+    fetchProjectRolesForUser(userId);
+  }
 
   async function createUser() {
     setSaving(true);
@@ -162,7 +209,7 @@ export default function UserManagement({ auth }) {
           <table style={s.table}>
             <thead>
               <tr>
-                {['User', 'Email', 'Role', 'Groups', 'Actions'].map(h =>
+                {['User', 'Email', 'Role', 'Groups', 'Project Roles', 'Actions'].map(h =>
                   <th key={h} style={s.th}>{h}</th>)}
               </tr>
             </thead>
@@ -203,6 +250,47 @@ export default function UserManagement({ auth }) {
                           </select>
                         )}
                       </div>
+                    </td>
+                    <td style={s.td}>
+                      {PROJECT_SCOPED_ROLES.includes(user.role) ? (
+                        <div style={s.groupsCell}>
+                          {Object.entries(
+                            (projectRoles[user.id] || []).reduce((acc, up) => {
+                              (acc[up.projectId] = acc[up.projectId] || []).push(up.role);
+                              return acc;
+                            }, {})
+                          ).map(([projectId, roles]) => {
+                            const projectName = projects.find(p => p.id === projectId)?.name || projectId;
+                            const isProjectAdmin = roles.includes('MERCHANDISER') && roles.includes('APPROVER');
+                            return (
+                              <span key={projectId} style={s.groupTag}>
+                                {projectName}: {isProjectAdmin ? 'Project Admin' : roles[0]}
+                                {roles.map(r => (
+                                  <button key={r} style={s.removeBtn} title={`Remove ${r}`}
+                                    onClick={() => removeProjectRole(user.id, projectId, r)}>×</button>
+                                ))}
+                              </span>
+                            );
+                          })}
+                          <select style={s.addSelect}
+                            value={roleAssignForm[user.id]?.projectId || ''}
+                            onChange={e => setRoleAssignForm(f => ({ ...f, [user.id]: { ...f[user.id], projectId: e.target.value } }))}>
+                            <option value="">Project...</option>
+                            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                          <select style={s.addSelect}
+                            value={roleAssignForm[user.id]?.role || ''}
+                            onChange={e => setRoleAssignForm(f => ({ ...f, [user.id]: { ...f[user.id], role: e.target.value } }))}>
+                            <option value="">Role...</option>
+                            <option value="MERCHANDISER">Merchandiser</option>
+                            <option value="APPROVER">Approver</option>
+                            <option value="PROJECT_ADMIN">Project Admin</option>
+                          </select>
+                          <button style={s.addSelect}
+                            disabled={!roleAssignForm[user.id]?.projectId || !roleAssignForm[user.id]?.role}
+                            onClick={() => assignProjectRole(user.id)}>+ Add</button>
+                        </div>
+                      ) : <span style={s.noEmail}>—</span>}
                     </td>
                     <td style={s.td}>
                       {user.username !== auth.username && (

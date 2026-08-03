@@ -17,6 +17,7 @@ import VersionHistoryTab from '../components/VersionHistoryTab';
 import PipelineEditor from './PipelineEditor';
 import ContentManager from './ContentManager';
 import SessionsModal from '../components/SessionsModal';
+import MyTeam from './MyTeam';
 
 const API_BASE = '/nexarank/api/v1';
 const RULE_TYPES = ['BOOST', 'PIN', 'BURY', 'SYNONYM', 'REDIRECT'];
@@ -38,6 +39,14 @@ const NAV_GROUPS = [
   ]},
   { label: 'EXPERIENCE MANAGER', items: [
       { key: 'content-rules', label: 'Content Rules', icon: '🖼', permission: 'RULES_VIEW' },
+  ]},
+  // NR-121 step 7: PROJECT_ADMIN isn't a stored role — it's a user holding
+  // both MERCHANDISER + APPROVER on the currently active project. Visibility
+  // for 'my-team' is handled as a special case below (not via
+  // ROLE_ALLOWED_TABS/permission, since it depends on auth.roles for the
+  // active project, not a single static role).
+  { label: 'MY PROJECT', items: [
+      { key: 'my-team', label: 'My Team', icon: '👥', permission: null },
   ]},
   { label: 'CONFIGURATION', items: [
       { key: 'facets',        label: 'Facet Manager',   icon: '▤', permission: 'FACET_VIEW' },
@@ -148,7 +157,7 @@ export default function RulesConsole({ auth, onLogout }) {
   const [fieldValues, setFieldValues] = useState([]);
 
   useEffect(() => {
-    const nonRuleTabs = ['users','facets','engine-config','click-intelligence','search-quality','rule-performance'];
+    const nonRuleTabs = ['users','facets','engine-config','click-intelligence','search-quality','rule-performance','my-team'];
     if (!nonRuleTabs.includes(activeTab)) fetchRules();
   }, [activeTab]);
 
@@ -490,9 +499,14 @@ export default function RulesConsole({ auth, onLogout }) {
     SUPER_ADMIN:  null,
   };
   const allowedTabs = ROLE_ALLOWED_TABS[auth.role] ?? null;
+  // NR-121 step 7: true only when the active project's JWT carries BOTH
+  // project-scoped roles — i.e. this user is PROJECT_ADMIN for whichever
+  // project they're currently switched into, not tenant-wide.
+  const isProjectAdminHere = (auth.roles || []).includes('MERCHANDISER') && (auth.roles || []).includes('APPROVER');
   const visibleGroups = NAV_GROUPS.map(g => ({
     ...g,
     items: g.items.filter(i => {
+      if (i.key === 'my-team') return isProjectAdminHere;
       if (allowedTabs !== null && !allowedTabs.includes(i.key)) return false;
       // If role explicitly allows this tab, skip permission check
       if (allowedTabs !== null && allowedTabs.includes(i.key)) return true;
@@ -630,6 +644,8 @@ export default function RulesConsole({ auth, onLogout }) {
             <FacetManager auth={auth} />
           ) : activeTab === 'users' ? (
             <UserManagement auth={auth} />
+          ) : activeTab === 'my-team' ? (
+            <MyTeam auth={auth} />
           ) : activeTab === 'ai-suggestions' ? (
             <AiSuggestions auth={auth} />
           ) : activeTab === 'curation' ? (

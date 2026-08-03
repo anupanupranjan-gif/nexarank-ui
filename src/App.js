@@ -26,6 +26,7 @@ export default function App() {
       token: data.token,
       username: data.username,
       role: data.role,
+      roles: data.roles || [data.role],
       tenantId: data.tenantId || 'default',
       projectId: data.projectId || 'main',
       groupId: data.groupId || '',
@@ -64,7 +65,12 @@ export default function App() {
         const res = await fetch('/nexarank/api/v1/auth/refresh', { method: 'POST', credentials: 'include' });
         if (!res.ok) { handleLogout(); return; }
         const data = await res.json();
-        const updated = { ...auth, token: data.token };
+        // NR-121 step 7: a plain refresh re-resolves role(s) for whatever
+        // project is currently active server-side (last_active_project_id) —
+        // keep the client in sync in case they changed since login (e.g. an
+        // admin just granted this session's user Project Admin), not just
+        // the token.
+        const updated = { ...auth, token: data.token, role: data.role, roles: data.roles || [data.role], projectId: data.projectId };
         localStorage.setItem('nexarank_auth', JSON.stringify(updated));
         setAuth(updated);
       } catch (e) { /* transient network failure — next tick retries, don't force logout */ }
