@@ -32,6 +32,9 @@ export default function UserManagement({ auth }) {
   const [projectRoles, setProjectRoles] = useState({}); // userId -> [{id, projectId, role}]
   const [roleAssignForm, setRoleAssignForm] = useState({}); // userId -> { projectId, role }
   const [form, setForm] = useState({ username: '', password: '', email: '', displayName: '', role: 'VIEWER', groupIds: [] });
+  const [inviteMode, setInviteMode] = useState(false); // NR-65
+  const [roleFilter, setRoleFilter] = useState('');
+  const [projectFilter, setProjectFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -115,10 +118,19 @@ export default function UserManagement({ auth }) {
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch(`${API_BASE}/auth/register`, {
+      // NR-65: invite mode skips a password entirely — the account is
+      // created disabled with an unusable placeholder password, and the
+      // user sets their own via the emailed accept-invite link.
+      const url = inviteMode ? `${API_BASE}/users/invite` : `${API_BASE}/auth/register`;
+      const res = await fetch(url, {
         method: 'POST',
         headers: authHeaders(),
-        body: JSON.stringify({
+        body: JSON.stringify(inviteMode ? {
+          username: form.username,
+          email: form.email || null,
+          displayName: form.displayName || null,
+          role: form.role,
+        } : {
           username: form.username,
           password: form.password,
           email: form.email || null,
@@ -131,7 +143,9 @@ export default function UserManagement({ auth }) {
       for (const gid of (form.groupIds || [])) {
         await fetch(`${API_BASE}/users/${data.id}/groups/${gid}`, { method: 'POST', headers: authHeaders() });
       }
-      setSuccess(`User "${data.username}" created as ${form.role}`);
+      setSuccess(inviteMode
+        ? `Invite sent to "${data.username}" (${form.email}) as ${form.role}`
+        : `User "${data.username}" created as ${form.role}`);
       setForm({ username: '', password: '', email: '', displayName: '', role: 'VIEWER', groupIds: [] });
       fetchUsers();
     } catch (e) { setError('Failed to create user'); }
@@ -152,6 +166,15 @@ export default function UserManagement({ auth }) {
 
   const selectedRoleMeta = ROLES.find(r => r.value === form.role);
 
+  // NR-65: admin UI enhancement — filter the user list by role and/or
+  // project assignment (project filter checks the same projectRoles state
+  // already fetched per MERCHANDISER/APPROVER user for the Project Roles column).
+  const filteredUsers = users.filter(u => {
+    if (roleFilter && u.role !== roleFilter) return false;
+    if (projectFilter && !(projectRoles[u.id] || []).some(up => up.projectId === projectFilter)) return false;
+    return true;
+  });
+
   return (
     <div style={s.page}>
       <div style={s.title}>User Management</div>
@@ -161,12 +184,18 @@ export default function UserManagement({ auth }) {
         {success && <div style={s.success}>{success}</div>}
 
         <div style={s.sectionLabel}>New User</div>
+        <label style={s.inviteToggle}>
+          <input type="checkbox" checked={inviteMode} onChange={e => setInviteMode(e.target.checked)} />
+          Invite via email (user sets their own password)
+        </label>
         <div style={s.formRow}>
           <input style={s.input} placeholder="Username *"
             value={form.username} onChange={e => setForm({...form, username: e.target.value})} />
-          <input style={s.input} placeholder="Password *" type="password"
-            value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
-          <input style={s.input} placeholder="Email address"
+          {!inviteMode && (
+            <input style={s.input} placeholder="Password *" type="password"
+              value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+          )}
+          <input style={s.input} placeholder={inviteMode ? 'Email address *' : 'Email address'}
             value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
           <input style={s.input} placeholder="Display name"
             value={form.displayName} onChange={e => setForm({...form, displayName: e.target.value})} />
@@ -195,15 +224,25 @@ export default function UserManagement({ auth }) {
           </div>
 
           <button style={s.btn} onClick={createUser}
-            disabled={saving || !form.username || !form.password}>
-            {saving ? 'Creating...' : 'Create User'}
+            disabled={saving || !form.username || (inviteMode ? !form.email : !form.password)}>
+            {saving ? (inviteMode ? 'Sending invite...' : 'Creating...') : (inviteMode ? 'Send Invite' : 'Create User')}
           </button>
         </div>
       </div>
 
       <div style={s.card}>
         <div style={s.cardTitle}>
-          Users {!loading && <span style={s.countBadge}>{users.length}</span>}
+          Users {!loading && <span style={s.countBadge}>{filteredUsers.length}</span>}
+        </div>
+        <div style={s.filterRow}>
+          <select style={s.addSelect} value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
+            <option value="">All Roles</option>
+            {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+          </select>
+          <select style={s.addSelect} value={projectFilter} onChange={e => setProjectFilter(e.target.value)}>
+            <option value="">All Projects</option>
+            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
         </div>
         {loading ? <div style={s.loading}>Loading...</div> : (
           <table style={s.table}>
@@ -214,7 +253,7 @@ export default function UserManagement({ auth }) {
               </tr>
             </thead>
             <tbody>
-              {users.map((user, i) => {
+              {filteredUsers.map((user, i) => {
                 const roleColors = ROLE_COLORS[user.role] || ROLE_COLORS.VIEWER;
                 return (
                   <tr key={user.id} style={i % 2 === 0 ? s.trEven : {}}>
@@ -315,6 +354,8 @@ const s = {
   cardTitle:       { fontSize: 15, fontWeight: 700, color: '#1a202c', marginBottom: 14 },
   countBadge:      { fontSize: 12, background: 'rgba(0,119,255,0.2)', color: '#4a5568', padding: '2px 8px', borderRadius: 10, marginLeft: 8 },
   sectionLabel:    { fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 },
+  inviteToggle:    { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#4a5568', marginBottom: 10, cursor: 'pointer' },
+  filterRow:       { display: 'flex', gap: 10, marginBottom: 14 },
   formRow:         { display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 12 },
   formRow2:        { display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' },
   input:           { background: '#f8f9fa', border: '1px solid #e1e4e8', borderRadius: 7, padding: '8px 12px', color: '#1a202c', fontSize: 13, minWidth: 160 },

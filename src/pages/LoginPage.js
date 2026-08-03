@@ -6,9 +6,11 @@ export default function LoginPage({ onLogin }) {
   const [password, setPassword]   = useState('');
   const [tenantId, setTenantId]   = useState('');
   const [error, setError]         = useState(null);
+  const [errorCode, setErrorCode] = useState(null);
   const [loading, setLoading]     = useState(false);
   const [branding, setBranding]   = useState(null);
   const [brandingLoading, setBrandingLoading] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
 
   async function fetchBranding(id) {
     if (!id) { setBranding(null); return; }
@@ -28,6 +30,8 @@ export default function LoginPage({ onLogin }) {
   async function handleLogin() {
     setLoading(true);
     setError(null);
+    setErrorCode(null);
+    setResendSent(false);
     try {
       const res = await fetch('/nexarank/api/v1/auth/login', {
         method: 'POST',
@@ -36,7 +40,7 @@ export default function LoginPage({ onLogin }) {
         body: JSON.stringify({ username, password })
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || 'Login failed'); return; }
+      if (!res.ok) { setError(data.error || 'Login failed'); setErrorCode(data.code || null); return; }
       onLogin(data);
     } catch (e) {
       setError('Could not reach the server. Please try again.');
@@ -47,6 +51,20 @@ export default function LoginPage({ onLogin }) {
 
   function handleKeyDown(e) {
     if (e.key === 'Enter') handleLogin();
+  }
+
+  // NR-65: a correct-password-but-unverified account has no Bearer token to
+  // authenticate a resend with, so this hits the same public/anti-
+  // enumeration endpoint forgot-password uses.
+  async function handleResendVerification() {
+    try {
+      await fetch('/nexarank/api/v1/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usernameOrEmail: username }),
+      });
+    } catch (e) { /* best-effort — same UI feedback regardless */ }
+    setResendSent(true);
   }
 
   const accentColor = branding?.brandColor || '#0077ff';
@@ -110,7 +128,18 @@ export default function LoginPage({ onLogin }) {
           />
         </div>
 
-        {error && <div style={s.error}>{error}</div>}
+        {error && (
+          <div style={s.error}>
+            {error}
+            {errorCode === 'EMAIL_NOT_VERIFIED' && (
+              resendSent ? (
+                <div style={s.hint}>Verification email sent — check your inbox.</div>
+              ) : (
+                <button style={s.linkBtn} onClick={handleResendVerification}>Resend verification email</button>
+              )
+            )}
+          </div>
+        )}
 
         <button
           style={{ ...s.btn, background: `linear-gradient(135deg, ${accentColor}, #0040aa)`, opacity: loading ? 0.7 : 1 }}
@@ -118,6 +147,10 @@ export default function LoginPage({ onLogin }) {
           disabled={loading}>
           {loading ? 'Signing in...' : 'Sign In'}
         </button>
+
+        <div style={s.forgotWrap}>
+          <a href="/nexarank-ui/forgot-password" style={s.forgotLink}>Forgot password?</a>
+        </div>
       </div>
     </div>
   );
@@ -139,4 +172,7 @@ const s = {
   hint:       { fontSize: 11, color: '#4a5568', marginTop: 4 },
   error:      { background: '#fff5f5', border: '1px solid #fca5a5', color: '#c0392b', borderRadius: 8, padding: '10px 14px', fontSize: 13, marginBottom: 16 },
   btn:        { width: '100%', padding: '11px', borderRadius: 8, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', marginTop: 4 },
+  linkBtn:    { display: 'block', background: 'none', border: 'none', color: '#0077ff', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, marginTop: 6, textDecoration: 'underline' },
+  forgotWrap: { textAlign: 'center', marginTop: 14 },
+  forgotLink: { fontSize: 12, color: '#4a5568', textDecoration: 'none' },
 };

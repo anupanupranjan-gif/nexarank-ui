@@ -17,6 +17,7 @@ import VersionHistoryTab from '../components/VersionHistoryTab';
 import PipelineEditor from './PipelineEditor';
 import ContentManager from './ContentManager';
 import SessionsModal from '../components/SessionsModal';
+import ProfileModal from '../components/ProfileModal';
 import MyTeam from './MyTeam';
 
 const API_BASE = '/nexarank/api/v1';
@@ -139,6 +140,7 @@ export default function RulesConsole({ auth, onLogout }) {
   const [historyRule, setHistoryRule] = useState(null);
   const [previewUrl, setPreviewUrl]   = useState(null); // rule whose history drawer is open
   const [showSessions, setShowSessions] = useState(false); // NR-120
+  const [showProfile, setShowProfile] = useState(false); // NR-65
 
   // NR-121 follow-up: badges previously showed the raw projectId, which is
   // a human-readable slug ("main") for the seed default tenant but a raw
@@ -597,6 +599,9 @@ export default function RulesConsole({ auth, onLogout }) {
             </div>
           )}
           {sidebarOpen && (
+            <button style={s.logoutBtn} onClick={() => setShowProfile(true)} title="My Profile">👤</button>
+          )}
+          {sidebarOpen && (
             <button style={s.logoutBtn} onClick={() => setShowSessions(true)} title="Active Sessions">🔐</button>
           )}
           {sidebarOpen && (
@@ -606,6 +611,7 @@ export default function RulesConsole({ auth, onLogout }) {
       </aside>
 
       {showSessions && <SessionsModal auth={auth} onClose={() => setShowSessions(false)} />}
+      {showProfile && <ProfileModal auth={auth} onClose={() => setShowProfile(false)} />}
 
       {/* MAIN CONTENT */}
       <main style={s.main}>

@@ -2,6 +2,10 @@
 import React, { useEffect, useState } from 'react';
 import LoginPage from './pages/LoginPage';
 import RulesConsole from './pages/RulesConsole';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import AcceptInvite from './pages/AcceptInvite';
+import VerifyEmail from './pages/VerifyEmail';
 
 // NR-120: access tokens are now short-lived (15 min); this refreshes them
 // silently well inside that window using the HttpOnly refresh cookie, so a
@@ -78,6 +82,21 @@ export default function App() {
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth]);
+
+  // NR-65: these are public pages reached via a direct emailed link, not
+  // through the app's own nav — no client-side router exists in this app
+  // (nginx's try_files already falls back to index.html for any path, so
+  // a direct browser navigation here still loads this bundle), so routing
+  // is a plain window.location.pathname check ahead of the normal
+  // authenticated/unauthenticated split below. Checked regardless of
+  // whether an existing session is present.
+  const path = window.location.pathname;
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  if (path.endsWith('/forgot-password')) return <ForgotPassword />;
+  if (path.endsWith('/reset-password')) return <ResetPassword token={token} />;
+  if (path.endsWith('/accept-invite')) return <AcceptInvite token={token} />;
+  if (path.endsWith('/verify-email')) return <VerifyEmail token={token} />;
 
   if (!auth) {
     return <LoginPage onLogin={handleLogin} />;
