@@ -12,7 +12,8 @@ const GROUP_LABELS = {
 const STAGE_DESCRIPTIONS = {
   STOPWORD_REMOVAL:    'Removes common words (a, the, for) before rule matching',
   SPELL_CORRECTION:    'Fixes common eCommerce misspellings (battrey → battery)',
-  QUERY_CLASSIFICATION:'Classifies query intent: NAVIGATIONAL, TRANSACTIONAL, CATEGORICAL, INFORMATIONAL',
+  QUERY_CLASSIFICATION:'Classifies query intent: NAVIGATIONAL, TRANSACTIONAL, CATEGORICAL, INFORMATIONAL (rule-based)',
+  LLM_QUERY_CLASSIFICATION: 'Overrides the rule-based classification using the configured LLM, when it returns a confident answer',
   LLM_QUERY_REWRITE:   'Expands query using configured LLM provider (Ollama, OpenAI, etc.)',
   RULE_APPLICATION:    'Matches merchandising rules, resolves A/B tests, builds boost/pin/bury instructions',
   PERSONALIZATION:     'Adds personalizedBoostIds from session click history',
