@@ -15,6 +15,7 @@ const STAGE_DESCRIPTIONS = {
   QUERY_CLASSIFICATION:'Classifies query intent: NAVIGATIONAL, TRANSACTIONAL, CATEGORICAL, INFORMATIONAL (rule-based)',
   LLM_QUERY_CLASSIFICATION: 'Overrides the rule-based classification using the configured LLM, when it returns a confident answer',
   LLM_QUERY_REWRITE:   'Expands query using configured LLM provider (Ollama, OpenAI, etc.)',
+  LLM_SYNONYM_SUGGESTION: 'Tracks live query frequency for AI-generated synonym suggestions (AI Suggestions page) — does not call the LLM inline',
   RULE_APPLICATION:    'Matches merchandising rules, resolves A/B tests, builds boost/pin/bury instructions',
   PERSONALIZATION:     'Adds personalizedBoostIds from session click history',
   DIVERSITY:           'Adds maxPerBrand and maxPerCategory diversity hints',

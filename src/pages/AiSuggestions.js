@@ -29,12 +29,17 @@ export default function AiSuggestions({ auth }) {
   async function fetchSuggestions() {
     setLoading(true);
     try {
-      const [boostRes, synRes] = await Promise.all([
+      const [boostRes, synRes, liveSynRes] = await Promise.all([
         fetch(`${API_BASE}/suggestions/boost`, { headers: authHeaders() }),
-        fetch(`${API_BASE}/suggestions/synonyms`, { headers: authHeaders() })
+        fetch(`${API_BASE}/suggestions/synonyms`, { headers: authHeaders() }),
+        fetch(`${API_BASE}/suggestions/synonyms/live`, { headers: authHeaders() })
       ]);
       if (boostRes.ok) setBoostSuggestions(await boostRes.json());
-      if (synRes.ok) setSynonymSuggestions(await synRes.json());
+      // NR-57: merge zero-result (existing) and live-query (new) synonym
+      // sources into the same review list — same card renderer, no new UI.
+      const zeroResultSyn = synRes.ok ? await synRes.json() : [];
+      const liveQuerySyn  = liveSynRes.ok ? await liveSynRes.json() : [];
+      setSynonymSuggestions([...zeroResultSyn, ...liveQuerySyn]);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }
@@ -246,13 +251,14 @@ async function deleteWatchedQuery(id) {
                 <span style={s.sectionIcon}>⟷</span>
                 Synonym Suggestions
               </div>
-              <div style={s.sectionDesc}>AI-powered synonym suggestions for zero-result queries</div>
+              <div style={s.sectionDesc}>AI-powered synonym suggestions for zero-result and frequent live queries</div>
             </div>
 
             {synonymSuggestions.length === 0 ? (
               <div style={s.empty}>
-                No meaningful zero-result queries found.
-                When customers search for terms with no results, AI will suggest synonyms here.
+                No meaningful queries found yet.
+                Zero-result queries and frequently-searched live queries (once the
+                LLM_SYNONYM_SUGGESTION pipeline stage is enabled) will suggest synonyms here.
               </div>
             ) : (
               <div style={s.cards}>
@@ -264,7 +270,12 @@ async function deleteWatchedQuery(id) {
                   return (
                     <div key={i} style={{...s.card, ...(isApplied ? s.cardApplied : {})}}>
                       <div style={s.cardTop}>
-                        <div style={{...s.cardType, background: 'rgba(139,92,246,0.2)', color: '#a78bfa'}}>SYNONYM</div>
+                        <div style={{display: 'flex', gap: 6}}>
+                          <div style={{...s.cardType, background: 'rgba(139,92,246,0.2)', color: '#a78bfa'}}>SYNONYM</div>
+                          {s_item.source === 'LIVE_QUERY' && (
+                            <div style={{...s.cardType, background: 'rgba(59,130,246,0.15)', color: '#60a5fa'}}>LIVE QUERY</div>
+                          )}
+                        </div>
                       </div>
                       <div style={s.cardQuery}>"{s_item.query}"</div>
                       <div style={s.cardReason}>{s_item.reason}</div>
