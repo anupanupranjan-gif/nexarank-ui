@@ -3,8 +3,11 @@ import React, { useState, useEffect } from 'react';
 
 const API_BASE = '/nexarank/api/v1';
 const SEARCH_API = '/api/v1/search';
-const GRADE_LABELS = ['Irrelevant', 'Poor', 'Fair', 'Perfect'];
-const GRADE_COLORS = ['#ef4444', '#f97316', '#3b82f6', '#22c55e'];
+// NR-58: expanded from 0-3 to a real 0-4 scale matching the ticket's
+// PERFECT/EXCELLENT/GOOD/FAIR/BAD 5-point ask, rather than collapsing two
+// LLM labels onto one existing grade value.
+const GRADE_LABELS = ['Bad', 'Fair', 'Good', 'Excellent', 'Perfect'];
+const GRADE_COLORS = ['#ef4444', '#f97316', '#eab308', '#3b82f6', '#22c55e'];
 
 export default function SearchQualityCuration({ auth }) {
   const [sets, setSets] = useState([]);
@@ -18,13 +21,20 @@ export default function SearchQualityCuration({ auth }) {
   const [searching, setSearching] = useState(false);
   const [newSetName, setNewSetName] = useState('');
   const [showNewSet, setShowNewSet] = useState(false);
+  const [autoScoring, setAutoScoring] = useState(false);
+  const [agreementRate, setAgreementRate] = useState(null);
+  const [ndcgResult, setNdcgResult] = useState(null);
+  const [computingNdcg, setComputingNdcg] = useState(false);
 
   function authHeaders() {
     return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth.token}` };
   }
 
   useEffect(() => { fetchSets(); fetchSuggestedQueries(); }, []);
-  useEffect(() => { if (activeSet) { fetchJudgments(); fetchSetStats(); } }, [activeSet]);
+  useEffect(() => {
+    if (activeSet) { fetchJudgments(); fetchSetStats(); fetchAgreementRate(); }
+    setNdcgResult(null);
+  }, [activeSet]);
   useEffect(() => { if (selectedQuery) searchForQuery(selectedQuery); }, [selectedQuery]);
 
   async function fetchSets() {
@@ -46,10 +56,54 @@ export default function SearchQualityCuration({ auth }) {
     const res = await fetch(`${API_BASE}/judgments/sets/${activeSet.id}/judgments`, { headers: authHeaders() });
     if (res.ok) {
       const data = await res.json();
+      // NR-58: store the full judgment (not just grade) so PENDING_REVIEW /
+      // source / llmGrade are available for the review UI below.
       const map = {};
-      data.forEach(j => { map[`${j.query}::${j.productId}`] = j.grade; });
+      data.forEach(j => { map[`${j.query}::${j.productId}`] = j; });
       setJudgments(map);
     }
+  }
+
+  async function fetchAgreementRate() {
+    if (!activeSet) return;
+    const res = await fetch(`${API_BASE}/judgments/sets/${activeSet.id}/agreement-rate`, { headers: authHeaders() });
+    if (res.ok) setAgreementRate(await res.json());
+  }
+
+  async function autoScore() {
+    if (!activeSet || !selectedQuery) return;
+    setAutoScoring(true);
+    try {
+      const res = await fetch(`${API_BASE}/judgments/sets/${activeSet.id}/auto-score`, {
+        method: 'POST', headers: authHeaders(),
+        body: JSON.stringify({ query: selectedQuery, topN: 10 })
+      });
+      if (res.ok) {
+        await fetchJudgments();
+        fetchSetStats();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        window.alert(err.error || 'Auto-scoring failed');
+      }
+    } finally { setAutoScoring(false); }
+  }
+
+  async function acceptAiGrade(judgmentId) {
+    if (!activeSet) return;
+    await fetch(`${API_BASE}/judgments/sets/${activeSet.id}/judgments/${judgmentId}/review`, {
+      method: 'PATCH', headers: authHeaders(), body: JSON.stringify({})
+    });
+    await fetchJudgments();
+    fetchAgreementRate();
+  }
+
+  async function computeNdcg() {
+    if (!activeSet) return;
+    setComputingNdcg(true);
+    try {
+      const res = await fetch(`${API_BASE}/judgments/sets/${activeSet.id}/ndcg`, { headers: authHeaders() });
+      if (res.ok) setNdcgResult(await res.json());
+    } finally { setComputingNdcg(false); }
   }
 
   async function fetchSetStats() {
@@ -61,7 +115,13 @@ export default function SearchQualityCuration({ auth }) {
   async function searchForQuery(query) {
     setSearching(true);
     try {
-      const res = await fetch(`${SEARCH_API}?q=${encodeURIComponent(query)}&size=10&mode=keyword`, {
+      // NR-58: hybrid, not keyword — matches LlmJudgmentService's auto-score
+      // mode (and SearchQualityService's own "hybrid is our production mode"
+      // convention) so a query's manually-displayed results and its
+      // auto-scored judgments are the same product set, letting the
+      // PENDING_REVIEW badges actually appear where a merchandiser is
+      // grading instead of only in a query fetched separately.
+      const res = await fetch(`${SEARCH_API}?q=${encodeURIComponent(query)}&size=10&mode=hybrid`, {
         headers: { 'X-API-Key': process.env.REACT_APP_SEARCH_API_KEY || 'searchx-dev-key-2026' }
       });
       if (res.ok) {
@@ -74,12 +134,19 @@ export default function SearchQualityCuration({ auth }) {
 
   async function saveJudgment(productId, productTitle, grade) {
     if (!activeSet || !selectedQuery) return;
-    await fetch(`${API_BASE}/judgments/sets/${activeSet.id}/judgments`, {
+    const res = await fetch(`${API_BASE}/judgments/sets/${activeSet.id}/judgments`, {
       method: 'PUT',
       headers: authHeaders(),
       body: JSON.stringify({ query: selectedQuery, productId, productTitle, grade })
     });
-    setJudgments(prev => ({ ...prev, [`${selectedQuery}::${productId}`]: grade }));
+    // NR-58: a manual grade click on a PENDING_REVIEW (AI) judgment counts
+    // as an override — saveJudgment (server-side) already marks it APPROVED,
+    // so use its response (not a locally-constructed partial) to pick that up.
+    if (res.ok) {
+      const saved = await res.json();
+      setJudgments(prev => ({ ...prev, [`${selectedQuery}::${productId}`]: saved }));
+      fetchAgreementRate();
+    }
     fetchSetStats();
   }
 
@@ -106,7 +173,7 @@ export default function SearchQualityCuration({ auth }) {
     if (activeSet?.id === setId) setActiveSet(null);
   }
 
-  const getGrade = (productId) => judgments[`${selectedQuery}::${productId}`];
+  const getJudgment = (productId) => judgments[`${selectedQuery}::${productId}`];
   const judgedCount = suggestedQueries.filter(q =>
     Object.keys(judgments).some(k => k.startsWith(q.query + '::'))
   ).length;
@@ -162,6 +229,32 @@ export default function SearchQualityCuration({ auth }) {
             </div>
           )}
 
+          {/* NR-58: LLM/human agreement rate */}
+          {agreementRate && agreementRate.totalReviewed > 0 && (
+            <div style={s.statsBar}>
+              <span style={s.statItem}>
+                AI/human agreement: <b>{Math.round(agreementRate.overallRate * 100)}%</b> ({agreementRate.agreed}/{agreementRate.totalReviewed})
+              </span>
+            </div>
+          )}
+
+          {/* NR-58: NDCG/MRR computed from this set's own approved judgments */}
+          {activeSet && (
+            <div style={s.ndcgSection}>
+              <button style={s.ndcgBtn} onClick={computeNdcg} disabled={computingNdcg}>
+                {computingNdcg ? 'Computing...' : '📊 Compute NDCG/MRR from this set'}
+              </button>
+              {ndcgResult && (
+                <div style={s.ndcgResult}>
+                  <div>NDCG@5: <b>{ndcgResult.ndcg5.toFixed(3)}</b></div>
+                  <div>NDCG@10: <b>{ndcgResult.ndcg10.toFixed(3)}</b></div>
+                  <div>MRR@10: <b>{ndcgResult.mrr10.toFixed(3)}</b></div>
+                  <div style={s.ndcgMeta}>{ndcgResult.queriesEvaluated}/{ndcgResult.queriesInSet} queries evaluated live</div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Query List */}
           <div style={s.querySection}>
             <div style={s.queryLabel}>
@@ -197,12 +290,15 @@ export default function SearchQualityCuration({ auth }) {
             <div style={s.selectPrompt}>
               <div style={s.promptIcon}>◑</div>
               <div style={s.promptText}>Select a query from the left to start rating results</div>
-              <div style={s.promptSub}>Grade each result 0-3 based on relevance to the query</div>
+              <div style={s.promptSub}>Grade each result 0-4 based on relevance to the query, or use Auto-Score with AI</div>
             </div>
           ) : (
             <>
               <div style={s.resultHeader}>
                 <div style={s.resultQuery}>Results for: <strong>{selectedQuery}</strong></div>
+                <button style={s.autoScoreBtn} onClick={autoScore} disabled={autoScoring}>
+                  {autoScoring ? 'Scoring...' : '🤖 Auto-Score with AI'}
+                </button>
                 <div style={s.gradeScale}>
                   {GRADE_LABELS.map((label, i) => (
                     <span key={i} style={{...s.gradeLegend, color: GRADE_COLORS[i]}}>
@@ -219,21 +315,44 @@ export default function SearchQualityCuration({ auth }) {
               ) : (
                 <div style={s.resultList}>
                   {searchResults.map((hit, i) => {
-                    const productId = hit.id || hit._id || String(i);
+                    // NR-58: search-api's real hit shape uses `productId`, not
+                    // `id`/`_id` — that fallback chain always fell through to
+                    // the array index, so every judgment ever saved from this
+                    // UI was keyed to a meaningless "0"/"1"/"2"... instead of
+                    // the real catalog product id. Found while building NDCG-
+                    // from-judgment-set (below), which matches judgments
+                    // against live search-api productIds by exact string
+                    // equality — silently broken for any judgment set graded
+                    // through this UI before this fix.
+                    const productId = hit.productId || hit.id || hit._id || String(i);
                     const productTitle = hit.name || hit.title || hit.productName || `Product ${productId}`;
-                    const currentGrade = getGrade(productId);
+                    const judgment = getJudgment(productId);
+                    const currentGrade = judgment?.grade;
+                    const isPending = judgment?.status === 'PENDING_REVIEW';
 
                     return (
                       <div key={productId} style={s.resultCard}>
                         <div style={s.resultRank}>#{i + 1}</div>
                         <div style={s.resultInfo}>
-                          <div style={s.resultTitle}>{productTitle}</div>
+                          <div style={s.resultTitle}>
+                            {productTitle}
+                            {isPending && (
+                              <span style={s.pendingBadge}>
+                                🤖 AI: {GRADE_LABELS[judgment.llmGrade]} — needs review
+                              </span>
+                            )}
+                          </div>
                           <div style={s.resultId}>ID: {productId}</div>
                           {hit.category && <div style={s.resultMeta}>{hit.category}</div>}
                           {hit.price && <div style={s.resultPrice}>${hit.price}</div>}
                         </div>
+                        {isPending && (
+                          <button style={s.acceptBtn} onClick={() => acceptAiGrade(judgment.id)}>
+                            ✓ Accept
+                          </button>
+                        )}
                         <div style={s.gradeButtons}>
-                          {[0, 1, 2, 3].map(grade => (
+                          {[0, 1, 2, 3, 4].map(grade => (
                             <button key={grade}
                               style={{
                                 ...s.gradeBtn,
@@ -296,7 +415,7 @@ const s = {
   promptIcon:     { fontSize: 40, opacity: 0.3 },
   promptText:     { fontSize: 15, color: '#4a5568', fontWeight: 600 },
   promptSub:      { fontSize: 13, color: '#475569' },
-  resultHeader:   { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid #e1e4e8' },
+  resultHeader:   { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '14px 20px', borderBottom: '1px solid #e1e4e8' },
   resultQuery:    { fontSize: 14, color: '#1a202c' },
   gradeScale:     { display: 'flex', gap: 12 },
   gradeLegend:    { fontSize: 11 },
@@ -312,4 +431,11 @@ const s = {
   resultPrice:    { fontSize: 12, color: '#22c55e', fontWeight: 600 },
   gradeButtons:   { display: 'flex', gap: 6 },
   gradeBtn:       { width: 32, height: 32, border: '1px solid', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 700, transition: 'all 0.15s' },
+  autoScoreBtn:   { fontSize: 12, fontWeight: 600, background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.4)', color: '#7c3aed', padding: '6px 12px', borderRadius: 6, cursor: 'pointer' },
+  pendingBadge:   { fontSize: 10, fontWeight: 700, color: '#7c3aed', background: 'rgba(139,92,246,0.12)', padding: '2px 6px', borderRadius: 5, marginLeft: 8 },
+  acceptBtn:      { fontSize: 11, fontWeight: 600, background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)', color: '#16a34a', padding: '5px 10px', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap' },
+  ndcgSection:    { padding: '8px 12px', borderTop: '1px solid #e1e4e8' },
+  ndcgBtn:        { width: '100%', fontSize: 11, fontWeight: 600, background: '#f8f9fa', border: '1px solid #e1e4e8', color: '#4a5568', padding: '6px 10px', borderRadius: 6, cursor: 'pointer' },
+  ndcgResult:     { marginTop: 8, fontSize: 12, color: '#1a202c', display: 'flex', flexDirection: 'column', gap: 3 },
+  ndcgMeta:       { fontSize: 10, color: '#64748b', marginTop: 2 },
 };
