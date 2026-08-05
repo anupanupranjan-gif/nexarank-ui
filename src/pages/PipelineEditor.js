@@ -537,8 +537,14 @@ export default function PipelineEditor({ auth }) {
         <div style={s.formCard}>
           <div style={s.sectionTitle}>LLM Provider Configuration</div>
           <div style={s.sectionDesc}>
-            Configure the LLM used for query rewrite. Works with Ollama, OpenAI,
-            Azure OpenAI, Anthropic, and Cohere.
+            Configure the LLM used for query rewrite, classification, and other
+            LLM-powered features. Ollama is fully supported for local dev.
+            "Custom / OpenAI-Compatible" covers any provider exposing an
+            OpenAI-shaped chat completions API — Groq, Together.ai, Mistral,
+            DeepSeek, Azure OpenAI, OpenAI itself, etc. (OPENAI/AZURE_OPENAI/
+            ANTHROPIC/COHERE below are named placeholders with no adapter
+            behind them yet — use Custom for an OpenAI-compatible provider
+            instead of picking one of those.)
           </div>
 
           {llmTestResult && (
@@ -555,8 +561,8 @@ export default function PipelineEditor({ auth }) {
                 value={llmConfig.provider || 'OLLAMA'}
                 onChange={e => setLlmConfig(p => ({ ...p, provider: e.target.value }))}
               >
-                {['OLLAMA', 'OPENAI', 'AZURE_OPENAI', 'ANTHROPIC', 'COHERE'].map(p => (
-                  <option key={p} value={p}>{p}</option>
+                {['OLLAMA', 'OPENAI_COMPATIBLE', 'OPENAI', 'AZURE_OPENAI', 'ANTHROPIC', 'COHERE'].map(p => (
+                  <option key={p} value={p}>{p === 'OPENAI_COMPATIBLE' ? 'CUSTOM / OPENAI-COMPATIBLE' : p}</option>
                 ))}
               </select>
             </div>
@@ -587,7 +593,9 @@ export default function PipelineEditor({ auth }) {
                 style={s.input}
                 value={llmConfig.endpoint || ''}
                 onChange={e => setLlmConfig(p => ({ ...p, endpoint: e.target.value }))}
-                placeholder="http://localhost:11434"
+                placeholder={llmConfig.provider === 'OPENAI_COMPATIBLE'
+                  ? 'https://api.groq.com/openai/v1 (base URL — /chat/completions is appended)'
+                  : 'http://localhost:11434'}
               />
             </div>
             <div style={{ ...s.formGroup, flex: 2 }}>
@@ -601,6 +609,19 @@ export default function PipelineEditor({ auth }) {
               />
             </div>
           </div>
+
+          {llmConfig.provider === 'OPENAI_COMPATIBLE' && (
+            <div style={s.formGroup}>
+              <label style={s.label}>Custom Headers (JSON, optional)</label>
+              <input
+                style={s.input}
+                value={llmConfig.customHeaders || ''}
+                onChange={e => setLlmConfig(p => ({ ...p, customHeaders: e.target.value }))}
+                placeholder='{"X-Custom-Header":"value"} — leave blank for standard Bearer auth'
+              />
+              <div style={s.hint}>Most OpenAI-compatible providers (Groq, Together.ai, etc.) only need the API Key above — this is for the rare provider that needs something extra.</div>
+            </div>
+          )}
 
           <div style={s.formGroup}>
             <label style={s.label}>Prompt Template</label>
