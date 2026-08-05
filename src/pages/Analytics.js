@@ -214,6 +214,13 @@ export default function Analytics({ auth, onCreateRuleFromQuery }) {
               <div style={s.kpiLabel}>Zero-Result Actioned / Unactioned</div>
               <div style={s.kpiSub}>Queries with a rule created vs. not yet</div>
             </div>
+            <div style={s.kpiCard}>
+              <div style={{ ...s.kpiValue, color: '#22c55e' }}>
+                {overview.zeroResultCount > 0 ? `${((overview.zeroResultRecoveryRate || 0) * 100).toFixed(0)}%` : 'N/A'}
+              </div>
+              <div style={s.kpiLabel}>Zero-Result Recovery Rate</div>
+              <div style={s.kpiSub}>{overview.zeroResultRecoveredCount || 0} auto-recovered via AI-suggested query</div>
+            </div>
           </div>
 
           {/* Trend Charts */}
@@ -440,7 +447,7 @@ export default function Analytics({ auth, onCreateRuleFromQuery }) {
             ) : (
               <table style={s.table}>
                 <thead>
-                  <tr>{['Query','Occurrences','Status','Action'].map(h=><th key={h} style={s.th}>{h}</th>)}</tr>
+                  <tr>{['Query','Occurrences','Status','AI Recovery','Action'].map(h=><th key={h} style={s.th}>{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {overview.topZeroResultQueries.map((q,i) => (
@@ -459,6 +466,23 @@ export default function Analytics({ auth, onCreateRuleFromQuery }) {
                         ) : (
                           <span style={{...s.statusPill, background:'rgba(107,140,186,0.12)', color:'#64748b'}}>
                             Unactioned
+                          </span>
+                        )}
+                      </td>
+                      <td style={s.td}>
+                        {q.recovered ? (
+                          <span style={{...s.statusPill, background:'rgba(34,197,94,0.12)', color:'#16a34a'}}
+                                title={`Retried live as "${q.suggestedQuery}"`}>
+                            🤖 Recovered → "{q.suggestedQuery}"
+                          </span>
+                        ) : q.suggestedQuery ? (
+                          <span style={{...s.statusPill, background:'rgba(249,115,22,0.12)', color:'#f97316'}}
+                                title={`Suggested but the retry still returned nothing`}>
+                            🤖 Suggested → "{q.suggestedQuery}" (no results)
+                          </span>
+                        ) : (
+                          <span style={{...s.statusPill, background:'rgba(107,140,186,0.12)', color:'#64748b'}}>
+                            —
                           </span>
                         )}
                       </td>

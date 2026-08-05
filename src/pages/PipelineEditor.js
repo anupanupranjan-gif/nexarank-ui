@@ -19,6 +19,7 @@ const STAGE_DESCRIPTIONS = {
   RULE_APPLICATION:    'Matches merchandising rules, resolves A/B tests, builds boost/pin/bury instructions',
   PERSONALIZATION:     'Adds personalizedBoostIds from session click history',
   DIVERSITY:           'Adds maxPerBrand and maxPerCategory diversity hints',
+  ZERO_RESULT_RECOVERY: 'When a search returns zero results, search-api asks the configured LLM for an alternative query and retries — this toggle only gates whether that retry runs (not a stage in the enrich() pipeline itself)',
 };
 
 export default function PipelineEditor({ auth }) {
