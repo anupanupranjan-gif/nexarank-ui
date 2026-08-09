@@ -69,6 +69,20 @@ const NAV_GROUPS = [
   
 ];
 
+// NR-123: default collapsed/expanded state for a first-time user, before
+// they've toggled anything. MERCHANDISING (day-to-day) stays open;
+// CONFIGURATION and ADMIN (touched less often) start collapsed. A user's own
+// toggles are persisted in localStorage and take precedence; the section
+// containing the current page is always force-expanded on load.
+const DEFAULT_COLLAPSED = {
+  'MERCHANDISING':      false,
+  'EXPERIENCE MANAGER': false,
+  'MY PROJECT':         false,
+  'CONFIGURATION':      true,
+  'INTELLIGENCE':       false,
+  'ADMIN':              true,
+};
+
 // ── VERSION HISTORY DRAWER ────────────────────────────────────────────────────
 
 function VersionDrawer({ rule, auth, onClose }) {
@@ -135,6 +149,33 @@ export default function RulesConsole({ auth, onLogout }) {
   const [editingId, setEditingId]     = useState(null);
   const [error, setError]             = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  // NR-123: per-section collapsed state for the sidebar nav. Seeded from the
+  // user's stored preference (localStorage), falling back to DEFAULT_COLLAPSED.
+  // The section containing the page the user lands on is force-expanded on
+  // load regardless of preference, so the sidebar never looks empty/unfamiliar
+  // — that load-time override is not written back to storage.
+  const [collapsedGroups, setCollapsedGroups] = useState(() => {
+    let stored = {};
+    try { stored = JSON.parse(localStorage.getItem('nexarank_nav_collapsed') || '{}'); } catch { stored = {}; }
+    const initialTab = localStorage.getItem('nexarank_active_tab') || 'all';
+    const activeGroupLabel = NAV_GROUPS.find(g => g.items.some(i => i.key === initialTab))?.label;
+    const map = {};
+    NAV_GROUPS.forEach(g => {
+      map[g.label] = (g.label in stored) ? stored[g.label] : (DEFAULT_COLLAPSED[g.label] ?? false);
+    });
+    if (activeGroupLabel) map[activeGroupLabel] = false;
+    return map;
+  });
+  const toggleGroup = (label) => {
+    setCollapsedGroups(prev => {
+      const nextCollapsed = !prev[label];
+      let stored = {};
+      try { stored = JSON.parse(localStorage.getItem('nexarank_nav_collapsed') || '{}'); } catch { stored = {}; }
+      stored[label] = nextCollapsed;
+      localStorage.setItem('nexarank_nav_collapsed', JSON.stringify(stored));
+      return { ...prev, [label]: nextCollapsed };
+    });
+  };
   const [projects, setProjects]       = useState([]);
   const [activeProject, setActiveProject] = useState(auth.projectId || 'main');
   const [historyRule, setHistoryRule] = useState(null);
@@ -572,10 +613,24 @@ export default function RulesConsole({ auth, onLogout }) {
         )}
 
         <nav style={s.nav}>
-          {visibleGroups.map(group => (
+          {visibleGroups.map(group => {
+            // NR-123: in the icon-only rail (sidebar collapsed) there are no
+            // group headers, so every item stays visible; the collapse
+            // affordance only applies to the expanded sidebar.
+            const groupCollapsed = sidebarOpen && !!collapsedGroups[group.label];
+            return (
             <div key={group.label} style={s.navGroup}>
-              {sidebarOpen && <div style={s.navGroupLabel}>{group.label}</div>}
-              {group.items.map(item => (
+              {sidebarOpen && (
+                <button
+                  style={s.navGroupHeader}
+                  onClick={() => toggleGroup(group.label)}
+                  aria-expanded={!groupCollapsed}
+                  title={groupCollapsed ? 'Expand section' : 'Collapse section'}>
+                  <span style={s.navGroupLabel}>{group.label}</span>
+                  <span style={{ ...s.navGroupChevron, transform: groupCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▾</span>
+                </button>
+              )}
+              {!groupCollapsed && group.items.map(item => (
                 <button key={item.key}
                   style={{ ...s.navItem, ...(activeTab === item.key ? s.navItemActive : {}) }}
                   onClick={() => { setActiveTab(item.key); localStorage.setItem('nexarank_active_tab', item.key); }}
@@ -586,7 +641,8 @@ export default function RulesConsole({ auth, onLogout }) {
                 </button>
               ))}
             </div>
-          ))}
+            );
+          })}
         </nav>
 
         <div style={s.userArea}>
@@ -1047,7 +1103,9 @@ const s = {
   hamburger: { background: '#0366d6', border: 'none', borderRadius: '6px', color: '#ffffff', cursor: 'pointer', fontSize: '14px', padding: '6px 10px', flexShrink: 0, lineHeight: 1, fontWeight: 700 },
   nav:       { flex: 1, padding: '12px 8px', overflowY: 'auto', overflowX: 'hidden' },
   navGroup:  { marginBottom: '20px' },
-  navGroupLabel: { fontSize: '9px', fontWeight: 700, color: '#8a94a6', letterSpacing: '2px', textTransform: 'uppercase', padding: '0 8px', marginBottom: '6px' },
+  navGroupHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '0 8px', marginBottom: '6px' },
+  navGroupLabel: { fontSize: '9px', fontWeight: 700, color: '#8a94a6', letterSpacing: '2px', textTransform: 'uppercase' },
+  navGroupChevron: { fontSize: '9px', color: '#8a94a6', transition: 'transform 0.15s', lineHeight: 1, flexShrink: 0 },
   navItem:   { display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '8px 8px', borderRadius: '8px', background: 'none', border: 'none', cursor: 'pointer', color: '#4a5568', fontSize: '12px', textAlign: 'left', transition: 'all 0.15s', position: 'relative', whiteSpace: 'nowrap' },
   navItemActive: { background: '#f0f6fc', color: '#0077ff', borderLeft: '2px solid #0077ff' },
   navIcon:   { fontSize: '13px', flexShrink: 0, width: 16, textAlign: 'center' },
