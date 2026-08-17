@@ -38,6 +38,10 @@ const NAV_GROUPS = [
       { key: 'pending', label: 'Pending Review',  icon: '◷', permission: 'RULES_APPROVE' },
       { key: 'ab-tests', label: 'A/B Tests', icon: '⚖', permission: 'RULES_VIEW' },
       { key: 'rule-performance', label: 'Rule Performance', icon: '📈', permission: 'RULES_VIEW' },
+      // NR-70 Tier 1: project-scoped rule-change history. Lives here rather
+      // than under ADMIN because MERCHANDISER/APPROVER are its main audience;
+      // the ADMIN group's own "Audit Log" entry opens the full Tier 2 view.
+      { key: 'rule-history', label: 'Rule History', icon: '🕐', permission: 'RULES_VIEW' },
   ]},
   { label: 'EXPERIENCE MANAGER', items: [
       { key: 'content-rules', label: 'Content Rules', icon: '🖼', permission: 'RULES_VIEW' },
@@ -202,7 +206,7 @@ export default function RulesConsole({ auth, onLogout }) {
   const [fieldValues, setFieldValues] = useState([]);
 
   useEffect(() => {
-    const nonRuleTabs = ['users','facets','engine-config','llm-config','click-intelligence','search-quality','rule-performance','my-team'];
+    const nonRuleTabs = ['users','facets','engine-config','llm-config','click-intelligence','search-quality','rule-performance','my-team','audit','rule-history'];
     if (!nonRuleTabs.includes(activeTab)) fetchRules();
   }, [activeTab]);
 
@@ -537,8 +541,8 @@ export default function RulesConsole({ auth, onLogout }) {
     // (curation) - this client-side gate was stricter than the API for no
     // reason found, and merchandisers are exactly who should be curating
     // the judgment sets that inform their own rule decisions.
-    MERCHANDISER: ['all','pending','ab-tests','analytics','ai-suggestions','click-intelligence','search-quality','curation','rule-performance','content-rules'],
-    APPROVER:     ['all','pending','ab-tests','analytics','ai-suggestions','click-intelligence','search-quality','curation','rule-performance','content-rules'],
+    MERCHANDISER: ['all','pending','ab-tests','analytics','ai-suggestions','click-intelligence','search-quality','curation','rule-performance','content-rules','rule-history'],
+    APPROVER:     ['all','pending','ab-tests','analytics','ai-suggestions','click-intelligence','search-quality','curation','rule-performance','content-rules','rule-history'],
     ADMIN:        null,
     TENANT_ADMIN: null,
     SUPER_ADMIN:  null,
@@ -723,7 +727,9 @@ export default function RulesConsole({ auth, onLogout }) {
           ) : activeTab === 'rule-performance' ? (
             <RulePerformanceTab auth={auth} />
           ) : activeTab === 'audit' ? (
-            <AuditLog auth={auth} />
+            <AuditLog auth={auth} mode="full" />
+          ) : activeTab === 'rule-history' ? (
+            <AuditLog auth={auth} mode="tier1" />
           ) : activeTab === 'pipeline' ? (
             <PipelineEditor auth={auth} />
           ) : activeTab === 'llm-config' ? (
