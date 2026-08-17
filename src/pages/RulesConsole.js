@@ -15,6 +15,7 @@ import RulePerformanceTab from '../components/RulePerformanceTab';
 import TriggerConditionBuilder from '../components/TriggerConditionBuilder';
 import VersionHistoryTab from '../components/VersionHistoryTab';
 import PipelineEditor from './PipelineEditor';
+import LlmConfigPage from './LlmConfigPage';
 import ContentManager from './ContentManager';
 import SessionsModal from '../components/SessionsModal';
 import ProfileModal from '../components/ProfileModal';
@@ -53,6 +54,7 @@ const NAV_GROUPS = [
       { key: 'facets',        label: 'Facet Manager',   icon: '▤', permission: 'FACET_VIEW' },
       { key: 'pipeline', label: 'Pipeline Editor', icon: '⟳', permission: 'ENGINE_CONFIG_VIEW' },
       { key: 'engine-config', label: 'Engine Config',   icon: '⛁', permission: 'ENGINE_CONFIG_VIEW' },
+      { key: 'llm-config',    label: 'LLM Config',      icon: '✦', permission: 'ENGINE_CONFIG_VIEW' },
   ]},
   { label: 'INTELLIGENCE', items: [
       { key: 'analytics',          label: 'Analytics',          icon: '▲', permission: 'CLICK_INTELLIGENCE_VIEW' },
@@ -200,7 +202,7 @@ export default function RulesConsole({ auth, onLogout }) {
   const [fieldValues, setFieldValues] = useState([]);
 
   useEffect(() => {
-    const nonRuleTabs = ['users','facets','engine-config','click-intelligence','search-quality','rule-performance','my-team'];
+    const nonRuleTabs = ['users','facets','engine-config','llm-config','click-intelligence','search-quality','rule-performance','my-team'];
     if (!nonRuleTabs.includes(activeTab)) fetchRules();
   }, [activeTab]);
 
@@ -724,6 +726,8 @@ export default function RulesConsole({ auth, onLogout }) {
             <AuditLog auth={auth} />
           ) : activeTab === 'pipeline' ? (
             <PipelineEditor auth={auth} />
+          ) : activeTab === 'llm-config' ? (
+            <LlmConfigPage auth={auth} />
           ) : activeTab === 'content-rules' ? (
             <ContentManager auth={auth} />
           ) : (

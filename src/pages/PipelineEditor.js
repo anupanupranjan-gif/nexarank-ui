@@ -41,12 +41,6 @@ export default function PipelineEditor({ auth }) {
   const [newStopword, setNewStopword]   = useState('');
   const [addingWord, setAddingWord]     = useState(false);
 
-  // LLM config
-  const [llmConfig, setLlmConfig]       = useState(null);
-  const [llmSaving, setLlmSaving]       = useState(false);
-  const [llmTestResult, setLlmTestResult] = useState(null);
-  const [llmTesting, setLlmTesting]     = useState(false);
-
   function authHeaders() {
     return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth.token}` };
   }
@@ -54,7 +48,6 @@ export default function PipelineEditor({ auth }) {
   useEffect(() => {
     fetchStages();
     fetchStopwords();
-    fetchLlmConfig();
   }, []);
 
   // ── Stages ──────────────────────────────────────────────────────────────────
@@ -162,51 +155,6 @@ export default function PipelineEditor({ auth }) {
     }
   }
 
-  // ── LLM Config ───────────────────────────────────────────────────────────────
-
-  async function fetchLlmConfig() {
-    try {
-      const res = await fetch(`${API_BASE}/llm-config`, { headers: authHeaders() });
-      if (res.ok) setLlmConfig(await res.json());
-    } catch (e) {}
-  }
-
-  async function saveLlmConfig() {
-    setLlmSaving(true);
-    try {
-      const res = await fetch(`${API_BASE}/llm-config`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify(llmConfig),
-      });
-      if (res.ok) {
-        setLlmConfig(await res.json());
-        setLlmTestResult({ success: true, message: 'LLM configuration saved' });
-        setTimeout(() => setLlmTestResult(null), 3000);
-      }
-    } catch (e) {
-      setError('Failed to save LLM config');
-    } finally {
-      setLlmSaving(false);
-    }
-  }
-
-  async function testLlmConnection() {
-    setLlmTesting(true);
-    setLlmTestResult(null);
-    try {
-      const res = await fetch(`${API_BASE}/llm-config/test`, {
-        method: 'POST',
-        headers: authHeaders(),
-      });
-      if (res.ok) setLlmTestResult(await res.json());
-    } catch (e) {
-      setLlmTestResult({ success: false, message: 'Connection test failed: ' + e.message });
-    } finally {
-      setLlmTesting(false);
-    }
-  }
-
   // ── Render ───────────────────────────────────────────────────────────────────
 
   if (loading) return <div style={s.loading}>Loading pipeline configuration...</div>;
@@ -222,7 +170,6 @@ export default function PipelineEditor({ auth }) {
     { key: 'pipeline', label: 'Pipeline Stages' },
     { key: 'preview',  label: 'Pipeline Preview' },
     { key: 'stopwords',label: `Stopwords (${stopwords.length})` },
-    { key: 'llm',      label: 'LLM Config' },
   ];
 
   return (
@@ -532,142 +479,6 @@ export default function PipelineEditor({ auth }) {
         </div>
       )}
 
-      {/* ── LLM CONFIG TAB ───────────────────────────────────────────────────── */}
-      {activeTab === 'llm' && llmConfig && (
-        <div style={s.formCard}>
-          <div style={s.sectionTitle}>LLM Provider Configuration</div>
-          <div style={s.sectionDesc}>
-            Configure the LLM used for query rewrite, classification, and other
-            LLM-powered features. Ollama is fully supported for local dev.
-            "Custom / OpenAI-Compatible" covers any provider exposing an
-            OpenAI-shaped chat completions API — Groq, Together.ai, Mistral,
-            DeepSeek, Azure OpenAI, OpenAI itself, etc. (OPENAI/AZURE_OPENAI/
-            ANTHROPIC/COHERE below are named placeholders with no adapter
-            behind them yet — use Custom for an OpenAI-compatible provider
-            instead of picking one of those.)
-          </div>
-
-          {llmTestResult && (
-            <div style={llmTestResult.success ? s.successMsg : s.errorMsg}>
-              {llmTestResult.success ? '✓ ' : '✗ '}{llmTestResult.message}
-            </div>
-          )}
-
-          <div style={s.formRow}>
-            <div style={s.formGroup}>
-              <label style={s.label}>Provider</label>
-              <select
-                style={s.select}
-                value={llmConfig.provider || 'OLLAMA'}
-                onChange={e => setLlmConfig(p => ({ ...p, provider: e.target.value }))}
-              >
-                {['OLLAMA', 'OPENAI_COMPATIBLE', 'OPENAI', 'AZURE_OPENAI', 'ANTHROPIC', 'COHERE'].map(p => (
-                  <option key={p} value={p}>{p === 'OPENAI_COMPATIBLE' ? 'CUSTOM / OPENAI-COMPATIBLE' : p}</option>
-                ))}
-              </select>
-            </div>
-            <div style={s.formGroup}>
-              <label style={s.label}>Model</label>
-              <input
-                style={s.input}
-                value={llmConfig.model || ''}
-                onChange={e => setLlmConfig(p => ({ ...p, model: e.target.value }))}
-                placeholder="gemma3:1b"
-              />
-            </div>
-            <div style={s.formGroup}>
-              <label style={s.label}>Timeout (seconds)</label>
-              <input
-                style={s.input}
-                type="number"
-                value={llmConfig.timeoutSeconds || 5}
-                onChange={e => setLlmConfig(p => ({ ...p, timeoutSeconds: parseInt(e.target.value) }))}
-              />
-            </div>
-          </div>
-
-          <div style={s.formRow}>
-            <div style={{ ...s.formGroup, flex: 3 }}>
-              <label style={s.label}>Endpoint URL</label>
-              <input
-                style={s.input}
-                value={llmConfig.endpoint || ''}
-                onChange={e => setLlmConfig(p => ({ ...p, endpoint: e.target.value }))}
-                placeholder={llmConfig.provider === 'OPENAI_COMPATIBLE'
-                  ? 'https://api.groq.com/openai/v1 (base URL — /chat/completions is appended)'
-                  : 'http://localhost:11434'}
-              />
-            </div>
-            <div style={{ ...s.formGroup, flex: 2 }}>
-              <label style={s.label}>API Key (if required)</label>
-              <input
-                style={s.input}
-                type="password"
-                value={llmConfig.apiKey || ''}
-                onChange={e => setLlmConfig(p => ({ ...p, apiKey: e.target.value }))}
-                placeholder="sk-..."
-              />
-            </div>
-          </div>
-
-          {llmConfig.provider === 'OPENAI_COMPATIBLE' && (
-            <div style={s.formGroup}>
-              <label style={s.label}>Custom Headers (JSON, optional)</label>
-              <input
-                style={s.input}
-                value={llmConfig.customHeaders || ''}
-                onChange={e => setLlmConfig(p => ({ ...p, customHeaders: e.target.value }))}
-                placeholder='{"X-Custom-Header":"value"} — leave blank for standard Bearer auth'
-              />
-              <div style={s.hint}>Most OpenAI-compatible providers (Groq, Together.ai, etc.) only need the API Key above — this is for the rare provider that needs something extra.</div>
-            </div>
-          )}
-
-          <div style={s.formGroup}>
-            <label style={s.label}>Prompt Template</label>
-            <textarea
-              style={{ ...s.input, minHeight: 80, fontFamily: 'monospace', fontSize: 12 }}
-              value={llmConfig.promptTemplate || llmConfig.effectivePromptTemplate || ''}
-              onChange={e => setLlmConfig(p => ({ ...p, promptTemplate: e.target.value }))}
-              placeholder="Leave blank to use default prompt"
-            />
-            <div style={s.hint}>Use %s as placeholder for the query. Leave blank for default.</div>
-          </div>
-
-          {/* Status */}
-          {llmConfig.lastStatus && (
-            <div style={s.lastTested}>
-              Status: <strong style={{
-                color: llmConfig.lastStatus === 'CONNECTED' ? '#16a34a' :
-                       llmConfig.lastStatus === 'FAILED' ? '#dc2626' : '#64748b'
-              }}>{llmConfig.lastStatus}</strong>
-              {llmConfig.lastTestedAt && ` — tested ${new Date(llmConfig.lastTestedAt).toLocaleString()}`}
-              {llmConfig.lastStatusMessage && ` — ${llmConfig.lastStatusMessage}`}
-            </div>
-          )}
-
-          <div style={s.actions}>
-            <button
-              style={{ ...s.btn, ...s.btnPrimary, opacity: llmSaving ? 0.6 : 1 }}
-              onClick={saveLlmConfig}
-              disabled={llmSaving}
-            >
-              {llmSaving ? 'Saving...' : '💾 Save LLM Config'}
-            </button>
-            <button
-              style={{ ...s.btn, ...s.btnSecondary, opacity: llmTesting ? 0.6 : 1 }}
-              onClick={testLlmConnection}
-              disabled={llmTesting}
-            >
-              {llmTesting ? '⟳ Testing...' : '⚡ Test Connection'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'llm' && !llmConfig && (
-        <div style={s.empty}>No LLM configuration found. Configure one via the API first.</div>
-      )}
     </div>
   );
 }
