@@ -410,7 +410,12 @@ const s = {
   judgedBadge:    { fontSize: 11, color: '#22c55e', fontWeight: 700 },
   clickCount:     { fontSize: 11, color: '#475569' },
   emptyQuery:     { fontSize: 12, color: '#475569', textAlign: 'center', padding: '12px 8px' },
-  rightPanel:     { background: '#ffffff', border: '1px solid #e1e4e8', borderRadius: 10, minHeight: 400 },
+  // minWidth: 0 overrides the grid item's default min-width:auto - without it, a
+  // long unbreakable product title forces this 1fr column to grow past the
+  // viewport (grid "blowout") instead of letting resultTitle's own ellipsis
+  // truncate it, and the shell's overflow:hidden then clips the excess with no
+  // scrollbar, pushing the grade buttons permanently off-screen.
+  rightPanel:     { background: '#ffffff', border: '1px solid #e1e4e8', borderRadius: 10, minHeight: 400, minWidth: 0 },
   selectPrompt:   { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 60, gap: 12 },
   promptIcon:     { fontSize: 40, opacity: 0.3 },
   promptText:     { fontSize: 15, color: '#4a5568', fontWeight: 600 },
