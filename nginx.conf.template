@@ -1,0 +1,27 @@
+resolver 8.8.8.8 valid=300s;
+
+server {
+    listen 8080;
+    root /usr/share/nginx/html;
+    index index.html;
+    absolute_redirect off;
+
+    # Built assets reference /nexarank-ui/... (package.json's CRA "homepage" field),
+    # so the SPA must be served under that same path prefix.
+    location = / {
+        return 302 /nexarank-ui/;
+    }
+
+    location /nexarank-ui/ {
+        alias /usr/share/nginx/html/;
+        try_files $uri $uri/ /nexarank-ui/index.html;
+    }
+
+    location /nexarank/ {
+        rewrite ^/nexarank/(.*)$ /$1 break;
+        proxy_pass ${NEXARANK_API_URL};
+        proxy_ssl_server_name on;
+        proxy_set_header Host $proxy_host;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}

@@ -1,5 +1,6 @@
 FROM nginx:alpine
+ENV NGINX_ENVSUBST_FILTER=^(NEXARANK_API_URL)$
 COPY build/ /usr/share/nginx/html/
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]
