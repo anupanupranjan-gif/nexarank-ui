@@ -117,9 +117,13 @@ async function addWatchedQuery() {
 }
 
 async function deleteWatchedQuery(id) {
-  await fetch(`${API_BASE}/suggestions/watched-queries/${id}`, {
+  const res = await fetch(`${API_BASE}/suggestions/watched-queries/${id}`, {
     method: 'DELETE', headers: authHeaders()
   });
+  if (!res.ok) {
+    alert(`Failed to remove watched query (${res.status}). It's still in the list.`);
+    return;
+  }
   fetchWatchedQueries();
 }
   async function applySuggestion(suggestion, key) {
