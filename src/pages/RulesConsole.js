@@ -16,6 +16,7 @@ import TriggerConditionBuilder from '../components/TriggerConditionBuilder';
 import VersionHistoryTab from '../components/VersionHistoryTab';
 import PipelineEditor from './PipelineEditor';
 import LlmConfigPage from './LlmConfigPage';
+import ConfigExportImport from './ConfigExportImport';
 import ContentManager from './ContentManager';
 import SessionsModal from '../components/SessionsModal';
 import ProfileModal from '../components/ProfileModal';
@@ -59,6 +60,10 @@ const NAV_GROUPS = [
       { key: 'pipeline', label: 'Pipeline Editor', icon: '⟳', permission: 'ENGINE_CONFIG_VIEW' },
       { key: 'engine-config', label: 'Engine Config',   icon: '⛁', permission: 'ENGINE_CONFIG_VIEW' },
       { key: 'llm-config',    label: 'LLM Config',      icon: '✦', permission: 'ENGINE_CONFIG_VIEW' },
+      // ADMIN-only (USER_MANAGEMENT is the closest existing frontend proxy
+      // for "ADMIN role" — matches the backend's hasRole("ADMIN") gate on
+      // /api/v1/config-export and /api/v1/config-import).
+      { key: 'config-export-import', label: 'Export / Import', icon: '⇅', permission: 'USER_MANAGEMENT' },
   ]},
   { label: 'INTELLIGENCE', items: [
       { key: 'analytics',          label: 'Analytics',          icon: '▲', permission: 'CLICK_INTELLIGENCE_VIEW' },
@@ -734,6 +739,8 @@ export default function RulesConsole({ auth, onLogout }) {
             <PipelineEditor auth={auth} />
           ) : activeTab === 'llm-config' ? (
             <LlmConfigPage auth={auth} />
+          ) : activeTab === 'config-export-import' ? (
+            <ConfigExportImport auth={auth} onNavigate={key => { setActiveTab(key); localStorage.setItem('nexarank_active_tab', key); }} />
           ) : activeTab === 'content-rules' ? (
             <ContentManager auth={auth} />
           ) : (
