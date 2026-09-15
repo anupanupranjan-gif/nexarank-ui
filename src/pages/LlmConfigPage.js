@@ -3,6 +3,35 @@ import React, { useState, useEffect } from 'react';
 
 const API_BASE = '/nexarank/api/v1';
 
+/** NR-176: keys must match LlmConfig.PROMPT_KEY_* on the backend. */
+const PROMPT_TEMPLATE_FIELDS = [
+  {
+    key: 'rewrite',
+    label: 'Query Rewrite Prompt Template',
+    hint: 'Used by the LLM_QUERY_REWRITE pipeline stage. Use %s as placeholder for the query. Leave blank for default.',
+  },
+  {
+    key: 'classification',
+    label: 'Query Classification Prompt Template',
+    hint: 'Used by the LLM_QUERY_CLASSIFICATION pipeline stage. Use %s as placeholder for the query. Leave blank for default.',
+  },
+  {
+    key: 'suggestion',
+    label: 'AI Synonym Suggestion Prompt Template',
+    hint: 'Used by AI rule synonym suggestions. Use %s twice — first for the query, then for the context clause. Leave blank for default.',
+  },
+  {
+    key: 'zero_result_recovery',
+    label: 'Zero-Result Recovery Prompt Template',
+    hint: 'Used by LLM zero-result-recovery suggestions. Use %s as placeholder for the query. Leave blank for default.',
+  },
+  {
+    key: 'judgment',
+    label: 'Judgment Auto-Scoring Prompt Template',
+    hint: 'Used by judgment auto-scoring. Use %s for the query and {{PRODUCT}} for the product title. Leave blank for default.',
+  },
+];
+
 /**
  * NR-154: llm_config is one row per tenant/project (no per-stage column), and
  * three of its six consumers are not pipeline stages at all — so it lives in
@@ -177,27 +206,21 @@ export default function LlmConfigPage({ auth }) {
             </div>
           )}
 
-          <div style={s.formGroup}>
-            <label style={s.label}>Query Rewrite Prompt Template</label>
-            <textarea
-              style={{ ...s.input, minHeight: 80, fontFamily: 'monospace', fontSize: 12 }}
-              value={llmConfig.promptTemplate || llmConfig.effectivePromptTemplate || ''}
-              onChange={e => setLlmConfig(p => ({ ...p, promptTemplate: e.target.value }))}
-              placeholder="Leave blank to use default prompt"
-            />
-            <div style={s.hint}>Used by the LLM_QUERY_REWRITE pipeline stage. Use %s as placeholder for the query. Leave blank for default.</div>
-          </div>
-
-          <div style={s.formGroup}>
-            <label style={s.label}>Query Classification Prompt Template</label>
-            <textarea
-              style={{ ...s.input, minHeight: 80, fontFamily: 'monospace', fontSize: 12 }}
-              value={llmConfig.classificationPromptTemplate || llmConfig.effectiveClassificationPromptTemplate || ''}
-              onChange={e => setLlmConfig(p => ({ ...p, classificationPromptTemplate: e.target.value }))}
-              placeholder="Leave blank to use default prompt"
-            />
-            <div style={s.hint}>Used by the LLM_QUERY_CLASSIFICATION pipeline stage. Use %s as placeholder for the query. Leave blank for default.</div>
-          </div>
+          {PROMPT_TEMPLATE_FIELDS.map(field => (
+            <div style={s.formGroup} key={field.key}>
+              <label style={s.label}>{field.label}</label>
+              <textarea
+                style={{ ...s.input, minHeight: 80, fontFamily: 'monospace', fontSize: 12 }}
+                value={(llmConfig.promptTemplates || {})[field.key] || ''}
+                onChange={e => setLlmConfig(p => ({
+                  ...p,
+                  promptTemplates: { ...(p.promptTemplates || {}), [field.key]: e.target.value },
+                }))}
+                placeholder={(llmConfig.defaultPromptTemplates || {})[field.key] || 'Leave blank to use default prompt'}
+              />
+              <div style={s.hint}>{field.hint}</div>
+            </div>
+          ))}
 
           {/* Status */}
           {llmConfig.lastStatus && (
