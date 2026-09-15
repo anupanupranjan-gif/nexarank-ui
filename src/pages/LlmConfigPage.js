@@ -178,14 +178,25 @@ export default function LlmConfigPage({ auth }) {
           )}
 
           <div style={s.formGroup}>
-            <label style={s.label}>Prompt Template</label>
+            <label style={s.label}>Query Rewrite Prompt Template</label>
             <textarea
               style={{ ...s.input, minHeight: 80, fontFamily: 'monospace', fontSize: 12 }}
               value={llmConfig.promptTemplate || llmConfig.effectivePromptTemplate || ''}
               onChange={e => setLlmConfig(p => ({ ...p, promptTemplate: e.target.value }))}
               placeholder="Leave blank to use default prompt"
             />
-            <div style={s.hint}>Use %s as placeholder for the query. Leave blank for default.</div>
+            <div style={s.hint}>Used by the LLM_QUERY_REWRITE pipeline stage. Use %s as placeholder for the query. Leave blank for default.</div>
+          </div>
+
+          <div style={s.formGroup}>
+            <label style={s.label}>Query Classification Prompt Template</label>
+            <textarea
+              style={{ ...s.input, minHeight: 80, fontFamily: 'monospace', fontSize: 12 }}
+              value={llmConfig.classificationPromptTemplate || llmConfig.effectiveClassificationPromptTemplate || ''}
+              onChange={e => setLlmConfig(p => ({ ...p, classificationPromptTemplate: e.target.value }))}
+              placeholder="Leave blank to use default prompt"
+            />
+            <div style={s.hint}>Used by the LLM_QUERY_CLASSIFICATION pipeline stage. Use %s as placeholder for the query. Leave blank for default.</div>
           </div>
 
           {/* Status */}
