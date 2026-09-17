@@ -61,8 +61,9 @@ export default function FacetManager({ auth }) {
     const payload = {
       fieldName: field.name,
       displayLabel: label,
-      facetType: (field.type === 'double' || field.type === 'float' || field.type === 'integer') ? 'RANGE' :
-            field.type === 'boolean' ? 'BOOLEAN' : 'TERMS',
+      facetType: (field.attributeType === 'DOUBLE' || field.attributeType === 'FLOAT' ||
+                  field.attributeType === 'INTEGER' || field.attributeType === 'LONG') ? 'RANGE' :
+            field.attributeType === 'BOOLEAN' ? 'BOOLEAN' : 'TERMS',
       enabled: true,
       sortOrder: 99
     };

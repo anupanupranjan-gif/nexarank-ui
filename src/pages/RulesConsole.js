@@ -829,7 +829,7 @@ export default function RulesConsole({ auth, onLogout }) {
                         <select style={s.input} value={form.boostField}
                           onChange={e => { setForm({...form, boostField: e.target.value, boostValue: ''}); fetchFieldValues(e.target.value); }}>
                           <option value="">Select field...</option>
-                          {indexFields.filter(f => f.type === 'keyword').map(f => (
+                          {indexFields.filter(f => f.attributeType === 'KEYWORD').map(f => (
                             <option key={f.name} value={f.name}>{f.name} ({f.type})</option>
                           ))}
                         </select>
